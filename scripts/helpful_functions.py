@@ -16,12 +16,30 @@ def get_account():
         return accounts.add(config["wallets"]["from_key"])
 
 
+def throwData(data: str, main_contract, account):
+    main_contract.throwData(data, {"from": account})
+
+
 def createGame(
-    gameFee: float, coefA: float, coefB: float, gameData: int, main_contract
+    gameFee: float, coefA: float, coefB: float, gameData: int, main_contract, account
 ):
-    getcontext().prec = 18
-    game_fee = Decimal(gameFee) * 10**18
-    getcontext().prec = 9
-    coef_A = Decimal(coefA) * 10**9
-    coef_B = Decimal(coefB) * 10**9
-    main_contract.createGame(game_fee, coef_A, coef_B, gameData)
+    game_fee = gameFee * 10**18
+    coef_A = coefA * 10**9
+    coef_B = coefB * 10**9
+    print(game_fee, coef_A, coef_B)
+    main_contract.createGame(game_fee, coef_A, coef_B, gameData, {"from": account})
+
+
+import random
+import string
+
+
+def generate_random_string():
+    length = random.randint(20, 100)
+
+    random_string = "".join(
+        random.choice(string.ascii_letters + string.digits + string.punctuation)
+        for _ in range(length)
+    )
+
+    return random_string

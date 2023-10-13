@@ -6,13 +6,11 @@ from scripts.helpful_functions import *
 def deploy_simple_storage():
     account = get_account()
     main_contract = MainContract.deploy({"from": account})
-    x = main_contract.getOwner()
-    data = "Some information about the game"
-    first_id = main_contract.getLastDataID()
-    main_contract.throwData(data, {"from": account})
-    second_id = main_contract.getLastDataID()
-    print(first_id, second_id)
-    print(main_contract.getGamesData(first_id))
+    throwData("sasas", main_contract, account)
+    throwData("sasa1s", main_contract, account)
+    throwData("sasa2s", main_contract, account)
+    createGame(0.1, 1.4, 1.6, 0, main_contract, account)
+    print(main_contract.getCoeficients(0), main_contract.getBankFee(0))
 
 
 def main():

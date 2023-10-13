@@ -7,10 +7,10 @@ contract MainContract {
     mapping(uint64 => uint128) public game;
     mapping(uint64 => address) public bankAddress;
     mapping(uint64 => uint256) public totalAmount;
-    mapping(uint64 => uint256) public bankFee;
+    mapping(uint64 => uint128) public bankFee;
     mapping(uint64 => uint256) public bankDeposit;
     mapping(uint64 => bool) public finished;
-    mapping(uint64 => uint256[2]) public coeficients;
+    mapping(uint64 => uint128[2]) public coeficients;
     mapping(uint64 => uint256[2]) public capacities;
     mapping(uint64 => mapping(address => uint256)) public usersA;
     mapping(uint64 => mapping(address => uint256)) public usersB;
@@ -36,12 +36,33 @@ contract MainContract {
         return owner;
     }
 
-    function createGame(
-        uint256 gameFee,
-        uint256 coefA,
-        uint256 coefB,
+    modifier validData(
+        uint128 gameFee,
+        uint128 coefA,
+        uint128 coefB,
         uint128 gameData
-    ) public payable {
+    ) {
+        require(gameFee < 100000000000000001, "Fee must be less than 10%");
+        require(1000000000 < coefA, "Coeficient must be grater than 1");
+        require(
+            coefA < 1000000000000000000,
+            "Coeficient must be less than 1000000000"
+        );
+        require(1000000000 < coefB, "Coeficient must be grater than 1");
+        require(
+            coefB < 1000000000000000000,
+            "Coeficient must be less than 1000000000"
+        );
+        require(gameData < lastDataID, "Incorrect data");
+        _;
+    }
+
+    function createGame(
+        uint128 gameFee,
+        uint128 coefA,
+        uint128 coefB,
+        uint128 gameData
+    ) public payable validData(gameFee, coefA, coefB, gameData) {
         game[lastGameID] = gameData;
         bankAddress[lastGameID] = msg.sender;
         totalAmount[lastGameID] = msg.value;
@@ -53,6 +74,7 @@ contract MainContract {
             msg.value / ((coefA - 10 ** 9)),
             msg.value / ((coefB - 10 ** 9))
         ];
+        lastGameID = lastGameID + 1;
     }
 
     function makeABet(
@@ -141,5 +163,57 @@ contract MainContract {
 
     function getGamesData(uint64 gameID) public view returns (string memory) {
         return gamesData[gameID];
+    }
+
+    function getGameData(uint64 gameID) public view returns (uint128) {
+        return game[gameID];
+    }
+
+    function getBankAddress(uint64 gameID) public view returns (address) {
+        return bankAddress[gameID];
+    }
+
+    function getTotalAmmount(uint64 gameID) public view returns (uint256) {
+        return totalAmount[gameID];
+    }
+
+    function getBankFee(uint64 gameID) public view returns (uint128) {
+        return bankFee[gameID];
+    }
+
+    function getBankDeposit(uint64 gameID) public view returns (uint256) {
+        return bankDeposit[gameID];
+    }
+
+    function getIsGameFinished(uint64 gameID) public view returns (bool) {
+        return finished[gameID];
+    }
+
+    function getCoeficients(
+        uint64 gameID
+    ) public view returns (uint128[2] memory) {
+        return coeficients[gameID];
+    }
+
+    function getCapacities(
+        uint64 gameID
+    ) public view returns (uint256[2] memory) {
+        return capacities[gameID];
+    }
+
+    function getDeposit(
+        uint64 gameID,
+        address user,
+        bool isA
+    ) public view returns (uint256) {
+        if (isA) {
+            return usersA[gameID][user];
+        } else {
+            return usersB[gameID][user];
+        }
+    }
+
+    function getIsAWinner(uint64 gameID) public view returns (bool) {
+        return isAWinner[gameID];
     }
 }
