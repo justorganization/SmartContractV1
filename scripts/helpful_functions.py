@@ -3,6 +3,10 @@ import os
 from decimal import Decimal, getcontext
 
 
+def roundation(nubmer: float, decimals: int):
+    return int(nubmer * 10**decimals) / 10**decimals
+
+
 def deploy_contract():
     account = get_account()
     main_contract = MainContract.deploy({"from": account})
@@ -21,13 +25,21 @@ def throwData(data: str, main_contract, account):
 
 
 def createGame(
-    gameFee: float, coefA: float, coefB: float, gameData: int, main_contract, account
+    gameFee: float,
+    coefA: float,
+    coefB: float,
+    gameData: int,
+    main_contract,
+    account,
+    value=10**9,
 ):
     game_fee = gameFee * 10**18
     coef_A = coefA * 10**9
     coef_B = coefB * 10**9
     print(game_fee, coef_A, coef_B)
-    main_contract.createGame(game_fee, coef_A, coef_B, gameData, {"from": account})
+    main_contract.createGame(
+        game_fee, coef_A, coef_B, gameData, {"from": account, "value": value}
+    )
 
 
 import random

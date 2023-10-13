@@ -79,7 +79,6 @@ contract MainContract {
 
     function makeABet(
         uint64 gameID,
-        uint256 bettedAmount,
         bool isA
     ) public payable onlyGameNotFinished(gameID) {
         if (isA) {
@@ -87,7 +86,7 @@ contract MainContract {
         } else {
             require(msg.value < capacities[gameID][1]);
         }
-        totalAmount[gameID] = totalAmount[gameID] + bettedAmount;
+        totalAmount[gameID] = totalAmount[gameID] + msg.value;
         if (isA) {
             capacities[gameID] = [
                 capacities[gameID][0] - (msg.value * (10 ** 18)),
