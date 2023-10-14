@@ -9,13 +9,16 @@ def roundation(nubmer: float, decimals: int):
 
 def deploy_contract():
     account = get_account()
+    accounts[1].transfer(accounts[0], "100 ether")
+
     main_contract = MainContract.deploy({"from": account})
     return main_contract
 
 
 def get_account():
     if network.show_active() == "development":
-        return accounts[2]
+        return accounts[0]
+
     else:
         return accounts.add(config["wallets"]["from_key"])
 
@@ -65,3 +68,8 @@ def generate_random_string():
     )
 
     return random_string
+
+
+def main():
+    for i in range(9):
+        print(accounts[i].balance())

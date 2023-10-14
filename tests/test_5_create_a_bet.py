@@ -30,9 +30,8 @@ def test_create_a_bet_3(account, main_contract):
 
 def test_create_a_bet_4(account, main_contract):
     first_id = main_contract.getLastGameID() - 1
-
-    coeficients = main_contract.getCoeficients(first_id)
     value = 10**17
+    coeficients = main_contract.getCoeficients(first_id)
     capacities_1 = main_contract.getCapacities(first_id)
     makeABet(first_id, True, main_contract, account, value)
     cap_A = capacities_1[0] - value
@@ -61,3 +60,10 @@ def test_create_a_bet_6(account, main_contract):
         value = 10**19
         first_id = main_contract.getLastGameID() - 1
         makeABet(first_id, False, main_contract, account, value)
+
+
+def test_create_a_bet_7(account, main_contract):
+    with pytest.raises(exceptions.VirtualMachineError):
+        value = 10**19
+        first_id = main_contract.getLastGameID() - 1
+        makeABet(first_id, True, main_contract, account, value)
