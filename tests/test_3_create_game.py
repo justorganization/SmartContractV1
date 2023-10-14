@@ -2,6 +2,7 @@ from scripts.helpful_functions import *
 from brownie import network, MainContract, exceptions
 import pytest
 import random
+import math
 
 
 def test_create_game_1(account, main_contract):
@@ -59,19 +60,17 @@ def test_create_game_3(account, main_contract):
 def test_create_game_4(account, main_contract):
     first_id = main_contract.getLastGameID()
     value = 10**19
-    main_contract.makeABet(3, True, {"from": account, "value": value})
+
     bank_fee = 0.1
     coef_A = 1.4
     coef_B = 1.6
     data_ID = 1
 
-    cap_A = value / (coef_A - 1)
-    cap_B = value / (coef_B - 1)
-    cap_A_2, cap_B_2 = (
-        main_contract.getCapacities(first_id)[0],
-        main_contract.getCapacities(first_id)[1],
-    )
+    cap_A = (int((value / (coef_A - 1)) / 10**9)) * 10**9
+    cap_B = (int((value / (coef_B - 1)) / 10**9)) * 10**9
+
     createGame(bank_fee, coef_A, coef_B, data_ID, main_contract, account, value)
+    capacities = main_contract.getCapacities(first_id)
     bank_fee_2 = main_contract.getBankFee(first_id) / 10**18
     coefs = main_contract.getCoeficients(first_id)
     data_ID_2 = main_contract.getGameData(first_id)
@@ -86,6 +85,6 @@ def test_create_game_4(account, main_contract):
         and bank_fee == bank_fee_2
         and value_2 == value
         and value_3 == value
-        and cap_A == cap_A_2
-        and cap_B == cap_B_2
+        and cap_A == capacities[0]
+        and cap_B == capacities[1]
     )

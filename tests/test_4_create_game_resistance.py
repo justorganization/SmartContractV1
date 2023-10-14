@@ -2,6 +2,7 @@ from scripts.helpful_functions import *
 from brownie import network, MainContract, exceptions
 import pytest
 import random
+import math
 
 
 def test_create_game_resistance_fee(account, main_contract):
@@ -140,3 +141,48 @@ def test_create_game_resistance_general_3(account, main_contract):
 @pytest.mark.parametrize("i", range(5))
 def test_create_game_resistance_3_repeated(account, main_contract, i):
     test_create_game_resistance_general_3(account, main_contract)
+
+
+def test_create_game_resistance_general_4(account, main_contract):
+    first_id = main_contract.getLastGameID()
+    bank_fee = 0.02
+    coef_A = random.randint(0, 100) * random.random()
+    coef_B = random.randint(0, 100) * random.random()
+    data_ID = random.randint(0, 10)
+    value = random.randint(1, 100) * 10**17
+
+    if (
+        bank_fee > 0.1
+        or coef_A <= 1
+        or coef_B <= 1
+        or data_ID >= main_contract.getLastDataID()
+    ):
+        with pytest.raises(exceptions.VirtualMachineError):
+            createGame(bank_fee, coef_A, coef_B, data_ID, main_contract, account, value)
+    else:
+        cap_A = (int((value / (coef_A - 1)) / 10**9)) * 10**9
+        cap_B = (int((value / (coef_B - 1)) / 10**9)) * 10**9
+        createGame(bank_fee, coef_A, coef_B, data_ID, main_contract, account, value)
+        bank_fee_2 = main_contract.getBankFee(first_id) / 10**18
+        coefs = main_contract.getCoeficients(first_id)
+        data_ID_2 = main_contract.getGameData(first_id)
+        coef_A_2 = coefs[0] / 10**9
+        coef_B_2 = coefs[1] / 10**9
+        capacities = main_contract.getCapacities(first_id)
+        value_2 = main_contract.getTotalAmmount(first_id)
+        value_3 = main_contract.getBankDeposit(first_id)
+        assert (
+            roundation(coef_A, 9) == coef_A_2
+            and roundation(coef_B, 9) == coef_B_2
+            and data_ID == data_ID_2
+            and bank_fee == bank_fee_2
+            and value_2 == value
+            and value_3 == value
+            and cap_A == capacities[0]
+            and cap_B == capacities[1]
+        )
+
+
+@pytest.mark.parametrize("i", range(5))
+def test_create_game_resistance_4_repeated(account, main_contract, i):
+    test_create_game_resistance_general_4(account, main_contract)

@@ -71,8 +71,8 @@ contract MainContract {
         bankDeposit[lastGameID] = msg.value;
         coeficients[lastGameID] = [coefA, coefB];
         capacities[lastGameID] = [
-            msg.value / ((coefA - 10 ** 9)),
-            msg.value / ((coefB - 10 ** 9))
+            (msg.value / (coefA - 10 ** 9)) * 10 ** 9,
+            (msg.value / (coefB - 10 ** 9)) * 10 ** 9
         ];
         lastGameID = lastGameID + 1;
     }
@@ -90,14 +90,14 @@ contract MainContract {
         if (isA) {
             capacities[gameID] = [
                 capacities[gameID][0] - (msg.value * (10 ** 18)),
-                totalAmount[gameID] /
-                    ((coeficients[gameID][1] - 10 ** 9) / 10 ** 9)
+                (totalAmount[gameID] / (coeficients[gameID][1] - 10 ** 9)) *
+                    10 ** 9
             ];
             usersA[gameID][msg.sender] = msg.value;
         } else {
             capacities[gameID] = [
-                totalAmount[gameID] /
-                    ((coeficients[gameID][0] - 10 ** 9) / 10 ** 9),
+                (totalAmount[gameID] / (coeficients[gameID][0] - 10 ** 9)) *
+                    10 ** 9,
                 capacities[gameID][1] - (msg.value * (10 ** 18))
             ];
             usersA[gameID][msg.sender] = msg.value;
