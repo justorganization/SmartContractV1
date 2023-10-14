@@ -15,7 +15,7 @@ def deploy_contract():
 
 def get_account():
     if network.show_active() == "development":
-        return accounts[0]
+        return accounts[1]
     else:
         return accounts.add(config["wallets"]["from_key"])
 
@@ -40,6 +40,16 @@ def createGame(
     main_contract.createGame(
         game_fee, coef_A, coef_B, gameData, {"from": account, "value": value}
     )
+
+
+def makeABet(
+    gameID: int,
+    isA: bool,
+    main_contract,
+    account,
+    value=10**9,
+):
+    main_contract.makeABet(gameID, isA, {"from": account, "value": value})
 
 
 import random

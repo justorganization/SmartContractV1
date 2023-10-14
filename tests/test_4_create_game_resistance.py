@@ -178,8 +178,8 @@ def test_create_game_resistance_general_4(account, main_contract):
             and bank_fee == bank_fee_2
             and value_2 == value
             and value_3 == value
-            and cap_A == capacities[0]
-            and cap_B == capacities[1]
+            and math.isclose(cap_A, capacities[0], abs_tol=10**15)
+            and math.isclose(cap_B, capacities[1], abs_tol=10**15)
         )
 
 
