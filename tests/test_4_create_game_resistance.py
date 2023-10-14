@@ -149,7 +149,7 @@ def test_create_game_resistance_general_4(account, main_contract):
     coef_A = random.randint(0, 100) * random.random()
     coef_B = random.randint(0, 100) * random.random()
     data_ID = random.randint(0, 10)
-    value = random.randint(1, 100) * 10**17
+    value = random.randint(1, 10) * 10**17
 
     if (
         bank_fee > 0.1

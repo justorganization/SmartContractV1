@@ -89,7 +89,7 @@ contract MainContract {
         totalAmount[gameID] = totalAmount[gameID] + msg.value;
         if (isA) {
             capacities[gameID] = [
-                capacities[gameID][0] - (msg.value * (10 ** 18)),
+                capacities[gameID][0] - (msg.value),
                 (totalAmount[gameID] / (coeficients[gameID][1] - 10 ** 9)) *
                     10 ** 9
             ];
@@ -98,7 +98,7 @@ contract MainContract {
             capacities[gameID] = [
                 (totalAmount[gameID] / (coeficients[gameID][0] - 10 ** 9)) *
                     10 ** 9,
-                capacities[gameID][1] - (msg.value * (10 ** 18))
+                capacities[gameID][1] - (msg.value)
             ];
             usersA[gameID][msg.sender] = msg.value;
         }
