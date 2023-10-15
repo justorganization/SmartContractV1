@@ -15,8 +15,9 @@ contract MainContract {
     mapping(uint64 => mapping(address => uint256)) public usersA;
     mapping(uint64 => mapping(address => uint256)) public usersB;
     mapping(uint64 => bool) public isAWinner;
-
-    uint256 ownersFee;
+    mapping(uint64 => address[]) usersAlist;
+    mapping(uint64 => address[]) usersBlist;
+    uint256 ownersFee = 1000000000000000;
     address owner;
     uint64 lastGameID;
     uint128 lastDataID;
@@ -79,8 +80,7 @@ contract MainContract {
 
     function addGameLiquidity(
         uint64 gameID
-    ) public payable onlyGameNotFinished(gameID) {
-        require(msg.sender == bankAddress[gameID]);
+    ) public payable onlyGameNotFinished(gameID) onlyBank(gameID) {
         uint256 totalGameAmount = totalAmount[gameID];
         totalAmount[gameID] = totalGameAmount + msg.value;
         uint128[2] memory coeficientsGame = coeficients[gameID];
@@ -107,6 +107,7 @@ contract MainContract {
                 (totalGameAmount / (coeficients[gameID][1] - 10 ** 9)) * 10 ** 9
             ];
             usersA[gameID][msg.sender] = msg.value;
+            usersAlist[gameID].push(msg.sender);
         } else {
             capacities[gameID] = [
                 (totalGameAmount / (coeficients[gameID][0] - 10 ** 9)) *
@@ -114,6 +115,7 @@ contract MainContract {
                 capacities[gameID][1] - (msg.value)
             ];
             usersA[gameID][msg.sender] = msg.value;
+            usersBlist[gameID].push(msg.sender);
         }
     }
 
@@ -152,6 +154,11 @@ contract MainContract {
         _;
     }
 
+    modifier onlyBank(uint64 gameID) {
+        require(bankAddress[gameID] == msg.sender);
+        _;
+    }
+
     function endGame(uint64 gameID, bool isA) public {
         finished[gameID] = true;
         isAWinner[gameID] = isA;
@@ -169,20 +176,50 @@ contract MainContract {
         }
     }
 
-    function claimeWinnings(
+    function claimWinnings(
         uint64 gameID
     ) public payable onlyGameFinished(gameID) {
         require(keyExists(gameID, msg.sender, isAWinner[gameID]));
+        uint256 winning;
         if (isAWinner[gameID]) {
             address payable winner = payable(msg.sender);
-            winner.transfer(
-                (usersA[gameID][msg.sender] * coeficients[gameID][0]) / 10 ** 9
-            );
+            winning =
+                (((usersA[gameID][msg.sender] * coeficients[gameID][0]) /
+                    10 ** 9) * (10 ** 18 - bankFee[gameID] - ownersFee)) /
+                10 ** 18;
+            winner.transfer(winning);
         } else {
             address payable winner = payable(msg.sender);
-            winner.transfer(
-                (usersB[gameID][msg.sender] * coeficients[gameID][1]) / 10 ** 9
-            );
+            winning =
+                (((usersB[gameID][msg.sender] * coeficients[gameID][1]) /
+                    10 ** 9) * (10 ** 18 - bankFee[gameID] - ownersFee)) /
+                10 ** 18;
+            winner.transfer(winning);
+        }
+        totalAmount[gameID] -= winning;
+    }
+
+    function closeGame(
+        uint64 gameID
+    ) public payable onlyGameFinished(gameID) onlyBank(gameID) {
+        if (isAWinner[gameID]) {
+            for (uint32 i = 0; i < usersAlist[gameID].length; i++) {
+                address payable winner = payable(usersAlist[gameID][i]);
+                uint256 winning = (((usersA[gameID][winner] *
+                    coeficients[gameID][0]) / 10 ** 9) *
+                    (10 ** 18 - bankFee[gameID] - ownersFee)) / 10 ** 18;
+                winner.transfer(winning);
+                totalAmount[gameID] -= winning;
+            }
+        } else {
+            for (uint32 i = 0; i < usersBlist[gameID].length; i++) {
+                address payable winner = payable(usersBlist[gameID][i]);
+                uint256 winning = (((usersB[gameID][winner] *
+                    coeficients[gameID][1]) / 10 ** 9) *
+                    (10 ** 18 - bankFee[gameID] - ownersFee)) / 10 ** 18;
+                winner.transfer(winning);
+                totalAmount[gameID] -= winning;
+            }
         }
     }
 
