@@ -77,6 +77,19 @@ contract MainContract {
         lastGameID = lastGameID + 1;
     }
 
+    function addGameLiquidity(
+        uint64 gameID
+    ) public payable onlyGameNotFinished(gameID) {
+        require(msg.sender == bankAddress[gameID]);
+        uint256 totalGameAmount = totalAmount[gameID];
+        totalAmount[gameID] = totalGameAmount + msg.value;
+        uint128[2] memory coeficientsGame = coeficients[gameID];
+        capacities[gameID] = [
+            (totalGameAmount / (coeficientsGame[0] - 10 ** 9)) * 10 ** 9,
+            (totalGameAmount / (coeficientsGame[1] - 10 ** 9)) * 10 ** 9
+        ];
+    }
+
     function makeABet(
         uint64 gameID,
         bool isA
@@ -86,21 +99,47 @@ contract MainContract {
         } else {
             require(msg.value < capacities[gameID][1]);
         }
-        totalAmount[gameID] = totalAmount[gameID] + msg.value;
+        uint256 totalGameAmount = totalAmount[gameID] + msg.value;
+        totalAmount[gameID] = totalGameAmount;
         if (isA) {
             capacities[gameID] = [
                 capacities[gameID][0] - (msg.value),
-                (totalAmount[gameID] / (coeficients[gameID][1] - 10 ** 9)) *
-                    10 ** 9
+                (totalGameAmount / (coeficients[gameID][1] - 10 ** 9)) * 10 ** 9
             ];
             usersA[gameID][msg.sender] = msg.value;
         } else {
             capacities[gameID] = [
-                (totalAmount[gameID] / (coeficients[gameID][0] - 10 ** 9)) *
+                (totalGameAmount / (coeficients[gameID][0] - 10 ** 9)) *
                     10 ** 9,
                 capacities[gameID][1] - (msg.value)
             ];
             usersA[gameID][msg.sender] = msg.value;
+        }
+    }
+
+    function addLiquidityToBet(
+        uint64 gameID,
+        bool isA
+    ) public payable onlyGameNotFinished(gameID) {
+        if (isA) {
+            require(msg.value < capacities[gameID][0]);
+            require(usersA[gameID][msg.sender] != 0);
+            uint256 totalGameAmount = totalAmount[gameID] + msg.value;
+            capacities[gameID] = [
+                capacities[gameID][0] - (msg.value),
+                (totalGameAmount / (coeficients[gameID][1] - 10 ** 9)) * 10 ** 9
+            ];
+            usersA[gameID][msg.sender] += msg.value;
+        } else {
+            require(msg.value < capacities[gameID][1]);
+            require(usersB[gameID][msg.sender] != 0);
+            uint256 totalGameAmount = totalAmount[gameID] + msg.value;
+            capacities[gameID] = [
+                (totalGameAmount / (coeficients[gameID][0] - 10 ** 9)) *
+                    10 ** 9,
+                capacities[gameID][1] - (msg.value)
+            ];
+            usersA[gameID][msg.sender] += msg.value;
         }
     }
 
