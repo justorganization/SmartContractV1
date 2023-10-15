@@ -33,31 +33,6 @@ contract MainContract {
         lastDataID = lastDataID + 1;
     }
 
-    function whichOwner() public view returns (address) {
-        return owner;
-    }
-
-    modifier validData(
-        uint128 gameFee,
-        uint128 coefA,
-        uint128 coefB,
-        uint128 gameData
-    ) {
-        require(gameFee < 100000000000000001, "Fee must be less than 10%");
-        require(1000000000 < coefA, "Coeficient must be grater than 1");
-        require(
-            coefA < 1000000000000000000,
-            "Coeficient must be less than 1000000000"
-        );
-        require(1000000000 < coefB, "Coeficient must be grater than 1");
-        require(
-            coefB < 1000000000000000000,
-            "Coeficient must be less than 1000000000"
-        );
-        require(gameData < lastDataID, "Incorrect data");
-        _;
-    }
-
     function createGame(
         uint128 gameFee,
         uint128 coefA,
@@ -93,7 +68,7 @@ contract MainContract {
     function makeABet(
         uint64 gameID,
         bool isA
-    ) public payable onlyGameNotFinished(gameID) {
+    ) public payable onlyGameNotFinished(gameID) hasntBet(gameID, isA) {
         if (isA) {
             require(msg.value < capacities[gameID][0]);
         } else {
@@ -114,7 +89,7 @@ contract MainContract {
                     10 ** 9,
                 capacities[gameID][1] - (msg.value)
             ];
-            usersA[gameID][msg.sender] = msg.value;
+            usersB[gameID][msg.sender] = msg.value;
             usersBlist[gameID].push(msg.sender);
         }
     }
@@ -141,22 +116,8 @@ contract MainContract {
                     10 ** 9,
                 capacities[gameID][1] - (msg.value)
             ];
-            usersA[gameID][msg.sender] += msg.value;
+            usersB[gameID][msg.sender] += msg.value;
         }
-    }
-
-    modifier onlyGameFinished(uint64 gameID) {
-        require(finished[gameID], "Game is not finished");
-        _;
-    }
-    modifier onlyGameNotFinished(uint64 gameID) {
-        require(!finished[gameID], "Game is finished");
-        _;
-    }
-
-    modifier onlyBank(uint64 gameID) {
-        require(bankAddress[gameID] == msg.sender);
-        _;
     }
 
     function endGame(uint64 gameID, bool isA) public {
@@ -221,6 +182,52 @@ contract MainContract {
                 totalAmount[gameID] -= winning;
             }
         }
+    }
+
+    // modifiers
+
+    modifier hasntBet(uint64 gameID, bool isA) {
+        if (isA) {
+            require(usersA[gameID][msg.sender] == 0);
+        } else {
+            require(usersB[gameID][msg.sender] == 0);
+        }
+        _;
+    }
+
+    modifier onlyGameFinished(uint64 gameID) {
+        require(finished[gameID], "Game is not finished");
+        _;
+    }
+    modifier onlyGameNotFinished(uint64 gameID) {
+        require(!finished[gameID], "Game is finished");
+        _;
+    }
+
+    modifier onlyBank(uint64 gameID) {
+        require(bankAddress[gameID] == msg.sender);
+        _;
+    }
+
+    modifier validData(
+        uint128 gameFee,
+        uint128 coefA,
+        uint128 coefB,
+        uint128 gameData
+    ) {
+        require(gameFee < 100000000000000001, "Fee must be less than 10%");
+        require(1000000000 < coefA, "Coeficient must be grater than 1");
+        require(
+            coefA < 1000000000000000000,
+            "Coeficient must be less than 1000000000"
+        );
+        require(1000000000 < coefB, "Coeficient must be grater than 1");
+        require(
+            coefB < 1000000000000000000,
+            "Coeficient must be less than 1000000000"
+        );
+        require(gameData < lastDataID, "Incorrect data");
+        _;
     }
 
     //getters
@@ -290,5 +297,17 @@ contract MainContract {
 
     function getIsAWinner(uint64 gameID) public view returns (bool) {
         return isAWinner[gameID];
+    }
+
+    function getUsersAlist(
+        uint64 gameID
+    ) public view returns (address[] memory) {
+        return usersAlist[gameID];
+    }
+
+    function getUsersBlist(
+        uint64 gameID
+    ) public view returns (address[] memory) {
+        return usersBlist[gameID];
     }
 }

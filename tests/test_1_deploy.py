@@ -5,4 +5,4 @@ import random
 
 
 def test_deploy(account, main_contract):
-    assert account == main_contract.whichOwner()
+    assert account == main_contract.getOwner()

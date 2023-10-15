@@ -9,10 +9,14 @@ def roundation(nubmer: float, decimals: int):
 
 def deploy_contract():
     account = get_account()
-    accounts[1].transfer(accounts[0], "100 ether")
+    accounts[1].transfer(account, "100 ether")
 
     main_contract = MainContract.deploy({"from": account})
     return main_contract
+
+
+def get_random_account():
+    return accounts[random.randint(2, 9)]
 
 
 def get_account():
@@ -45,7 +49,25 @@ def createGame(
     )
 
 
+def addGameLiquidity(gameID: int, main_contract, account, value=10**9):
+    main_contract.addGameLiquidity(gameID, {"from": account, "value": value})
+
+
+def addBetLiquidity(gameID: int, isA: bool, main_contract, account, value=10**9):
+    main_contract.addLiquidityToBet(gameID, isA, {"from": account, "value": value})
+
+
 def makeABet(
+    gameID: int,
+    isA: bool,
+    main_contract,
+    account,
+    value=10**9,
+):
+    main_contract.makeABet(gameID, isA, {"from": account, "value": value})
+
+
+def makeABet_safely(
     gameID: int,
     isA: bool,
     main_contract,
@@ -72,4 +94,4 @@ def generate_random_string():
 
 def main():
     for i in range(9):
-        print(accounts[i].balance())
+        print(accounts.add(initial_balance="10 ether").balance())
