@@ -122,7 +122,7 @@ contract MainContract {
 
     function endGame(uint64 gameID, bool isA) public {
         finished[gameID] = true;
-        isAWinner[gameID] = isA;
+        isAWinner[gameID] = isA; //todo
     }
 
     function keyExists(
@@ -149,6 +149,7 @@ contract MainContract {
                     10 ** 9) * (10 ** 18 - bankFee[gameID] - ownersFee)) /
                 10 ** 18;
             winner.transfer(winning);
+            usersA[gameID][msg.sender] = 0;
         } else {
             address payable winner = payable(msg.sender);
             winning =
@@ -165,21 +166,25 @@ contract MainContract {
     ) public payable onlyGameFinished(gameID) onlyBank(gameID) {
         if (isAWinner[gameID]) {
             for (uint32 i = 0; i < usersAlist[gameID].length; i++) {
-                address payable winner = payable(usersAlist[gameID][i]);
-                uint256 winning = (((usersA[gameID][winner] *
-                    coeficients[gameID][0]) / 10 ** 9) *
-                    (10 ** 18 - bankFee[gameID] - ownersFee)) / 10 ** 18;
-                winner.transfer(winning);
-                totalAmount[gameID] -= winning;
+                if (usersA[gameID][usersAlist[gameID][i]] != 0) {
+                    address payable winner = payable(usersAlist[gameID][i]);
+                    uint256 winning = (((usersA[gameID][winner] *
+                        coeficients[gameID][0]) / 10 ** 9) *
+                        (10 ** 18 - bankFee[gameID] - ownersFee)) / 10 ** 18;
+                    winner.transfer(winning);
+                    totalAmount[gameID] -= winning;
+                }
             }
         } else {
             for (uint32 i = 0; i < usersBlist[gameID].length; i++) {
-                address payable winner = payable(usersBlist[gameID][i]);
-                uint256 winning = (((usersB[gameID][winner] *
-                    coeficients[gameID][1]) / 10 ** 9) *
-                    (10 ** 18 - bankFee[gameID] - ownersFee)) / 10 ** 18;
-                winner.transfer(winning);
-                totalAmount[gameID] -= winning;
+                if (usersB[gameID][usersBlist[gameID][i]] != 0) {
+                    address payable winner = payable(usersBlist[gameID][i]);
+                    uint256 winning = (((usersB[gameID][winner] *
+                        coeficients[gameID][1]) / 10 ** 9) *
+                        (10 ** 18 - bankFee[gameID] - ownersFee)) / 10 ** 18;
+                    winner.transfer(winning);
+                    totalAmount[gameID] -= winning;
+                }
             }
         }
     }

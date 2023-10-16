@@ -21,15 +21,43 @@ def test_make_bet_resistance_1(main_contract):
         capacities = main_contract.getCapacities(first_id)
         if isA:
             if value < capacities[0]:
-                makeABet(first_id, isA, main_contract, account, value)
-                assert account in main_contract.getUsersAlist(first_id)
+                if main_contract.getDeposit(first_id, account, True) > 0:
+                    first_bet = main_contract.getDeposit(first_id, account, True)
+                    addBetLiquidity(first_id, isA, main_contract, account, value)
+                    second_bet = main_contract.getDeposit(first_id, account, True)
+                    assert account in main_contract.getUsersAlist(first_id)
+                    assert first_bet + value == second_bet
+                    with pytest.raises(exceptions.VirtualMachineError):
+                        makeABet(first_id, isA, main_contract, account, value)
+                else:
+                    with pytest.raises(exceptions.VirtualMachineError):
+                        addBetLiquidity(first_id, isA, main_contract, account, value)
+                    makeABet(first_id, isA, main_contract, account, value)
+                    first_bet = main_contract.getDeposit(first_id, account, True)
+                    assert account in main_contract.getUsersAlist(first_id)
+                    assert first_bet == value
+
             else:
                 with pytest.raises(exceptions.VirtualMachineError):
                     makeABet(first_id, isA, main_contract, account, value)
         else:
             if value < capacities[1]:
-                makeABet(first_id, isA, main_contract, account, value)
-                assert account in main_contract.getUsersBlist(first_id)
+                if main_contract.getDeposit(first_id, account, False) > 0:
+                    first_bet = main_contract.getDeposit(first_id, account, False)
+                    addBetLiquidity(first_id, isA, main_contract, account, value)
+                    second_bet = main_contract.getDeposit(first_id, account, False)
+                    assert account in main_contract.getUsersBlist(first_id)
+                    assert first_bet + value == second_bet
+                    with pytest.raises(exceptions.VirtualMachineError):
+                        makeABet(first_id, isA, main_contract, account, value)
+                else:
+                    with pytest.raises(exceptions.VirtualMachineError):
+                        addBetLiquidity(first_id, isA, main_contract, account, value)
+                    makeABet(first_id, isA, main_contract, account, value)
+                    first_bet = main_contract.getDeposit(first_id, account, False)
+                    assert account in main_contract.getUsersBlist(first_id)
+                    assert first_bet == value
+
             else:
                 with pytest.raises(exceptions.VirtualMachineError):
                     makeABet(first_id, isA, main_contract, account, value)
