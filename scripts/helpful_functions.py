@@ -43,7 +43,6 @@ def createGame(
     game_fee = gameFee * 10**18
     coef_A = coefA * 10**9
     coef_B = coefB * 10**9
-    print(game_fee, coef_A, coef_B)
     main_contract.createGame(
         game_fee, coef_A, coef_B, gameData, {"from": account, "value": value}
     )
@@ -75,6 +74,10 @@ def makeABet_safely(
     value=10**9,
 ):
     main_contract.makeABet(gameID, isA, {"from": account, "value": value})
+
+
+def claimWinnings(gameID: int, main_contract, account):
+    main_contract.claimWinnings(gameID)
 
 
 import random

@@ -5,7 +5,7 @@ import random
 
 
 @pytest.fixture
-def account(scope="module"):
+def account():
     return get_account()
 
 

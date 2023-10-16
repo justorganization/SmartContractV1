@@ -63,6 +63,7 @@ contract MainContract {
             (totalGameAmount / (coeficientsGame[0] - 10 ** 9)) * 10 ** 9,
             (totalGameAmount / (coeficientsGame[1] - 10 ** 9)) * 10 ** 9
         ];
+        bankDeposit[gameID] += msg.value;
     }
 
     function makeABet(
