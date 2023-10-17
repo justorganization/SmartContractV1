@@ -138,9 +138,7 @@ contract MainContract {
         }
     }
 
-    function claimWinnings(
-        uint64 gameID
-    ) public payable onlyGameFinished(gameID) {
+    function claimWinnings(uint64 gameID) public onlyGameFinished(gameID) {
         require(keyExists(gameID, msg.sender, isAWinner[gameID]));
         uint256 winning;
         if (isAWinner[gameID]) {
@@ -158,13 +156,14 @@ contract MainContract {
                     10 ** 9) * (10 ** 18 - bankFee[gameID] - ownersFee)) /
                 10 ** 18;
             winner.transfer(winning);
+            usersB[gameID][msg.sender] = 0;
         }
         totalAmount[gameID] -= winning;
     }
 
     function closeGame(
         uint64 gameID
-    ) public payable onlyGameFinished(gameID) onlyBank(gameID) {
+    ) public onlyGameFinished(gameID) onlyBank(gameID) {
         if (isAWinner[gameID]) {
             for (uint32 i = 0; i < usersAlist[gameID].length; i++) {
                 if (usersA[gameID][usersAlist[gameID][i]] != 0) {
@@ -174,6 +173,7 @@ contract MainContract {
                         (10 ** 18 - bankFee[gameID] - ownersFee)) / 10 ** 18;
                     winner.transfer(winning);
                     totalAmount[gameID] -= winning;
+                    usersA[gameID][usersAlist[gameID][i]] = 0;
                 }
             }
         } else {
@@ -185,6 +185,7 @@ contract MainContract {
                         (10 ** 18 - bankFee[gameID] - ownersFee)) / 10 ** 18;
                     winner.transfer(winning);
                     totalAmount[gameID] -= winning;
+                    usersB[gameID][usersAlist[gameID][i]] = 0;
                 }
             }
         }

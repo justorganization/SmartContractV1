@@ -77,7 +77,7 @@ def makeABet_safely(
 
 
 def claimWinnings(gameID: int, main_contract, account):
-    main_contract.claimWinnings(gameID)
+    main_contract.claimWinnings(gameID, {"from": account})
 
 
 import random
