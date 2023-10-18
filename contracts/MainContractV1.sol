@@ -185,7 +185,7 @@ contract MainContract {
                         (10 ** 18 - bankFee[gameID] - ownersFee)) / 10 ** 18;
                     winner.transfer(winning);
                     totalAmount[gameID] -= winning;
-                    usersB[gameID][usersAlist[gameID][i]] = 0;
+                    usersB[gameID][usersBlist[gameID][i]] = 0;
                 }
             }
         }
