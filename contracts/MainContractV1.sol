@@ -56,8 +56,8 @@ contract MainContract {
     function addGameLiquidity(
         uint64 gameID
     ) public payable onlyGameNotFinished(gameID) onlyBank(gameID) {
-        uint256 totalGameAmount = totalAmount[gameID];
-        totalAmount[gameID] = totalGameAmount + msg.value;
+        uint256 totalGameAmount = totalAmount[gameID] + msg.value;
+        totalAmount[gameID] = totalGameAmount;
         uint128[2] memory coeficientsGame = coeficients[gameID];
         capacities[gameID] = [
             (totalGameAmount / (coeficientsGame[0] - 10 ** 9)) * 10 ** 9,
@@ -108,6 +108,7 @@ contract MainContract {
                 (totalGameAmount / (coeficients[gameID][1] - 10 ** 9)) * 10 ** 9
             ];
             usersA[gameID][msg.sender] += msg.value;
+            totalAmount[gameID] = totalGameAmount;
         } else {
             require(msg.value < capacities[gameID][1]);
             require(usersB[gameID][msg.sender] != 0);
@@ -118,6 +119,7 @@ contract MainContract {
                 capacities[gameID][1] - (msg.value)
             ];
             usersB[gameID][msg.sender] += msg.value;
+            totalAmount[gameID] = totalGameAmount;
         }
     }
 
@@ -147,6 +149,7 @@ contract MainContract {
                 (((usersA[gameID][msg.sender] * coeficients[gameID][0]) /
                     10 ** 9) * (10 ** 18 - bankFee[gameID] - ownersFee)) /
                 10 ** 18;
+            totalAmount[gameID] -= winning;
             winner.transfer(winning);
             usersA[gameID][msg.sender] = 0;
         } else {
@@ -155,10 +158,10 @@ contract MainContract {
                 (((usersB[gameID][msg.sender] * coeficients[gameID][1]) /
                     10 ** 9) * (10 ** 18 - bankFee[gameID] - ownersFee)) /
                 10 ** 18;
+            totalAmount[gameID] -= winning;
             winner.transfer(winning);
             usersB[gameID][msg.sender] = 0;
         }
-        totalAmount[gameID] -= winning;
     }
 
     function closeGame(
@@ -189,6 +192,10 @@ contract MainContract {
                 }
             }
         }
+        address payable bank = payable(msg.sender);
+        bank.transfer(
+            (totalAmount[gameID] * (10 ** 18 - 1000000000000000)) / 10 ** 18
+        );
     }
 
     // modifiers

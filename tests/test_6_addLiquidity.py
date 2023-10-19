@@ -22,10 +22,12 @@ def test_create_bet_second_time(account, main_contract):
 def test_add_liquidity(account, main_contract):
     gameID = main_contract.getLastGameID() - 1
     first = main_contract.getDeposit(gameID, account, True)
+    first_tot_amount = main_contract.getTotalAmmount(gameID)
     value = random.randint(1, 5) * random.randint(16, 18)
     addBetLiquidity(gameID, True, main_contract, account, value)
+    second_tot_amount = main_contract.getTotalAmmount(gameID)
     second = main_contract.getDeposit(gameID, account, True)
-    assert first + value == second
+    assert first + value == second and second_tot_amount - first_tot_amount == value
 
 
 def test_add_liquidity_2(account, main_contract):

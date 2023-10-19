@@ -66,14 +66,19 @@ def test_claim_winnings_A(main_contract, bets):
     main_contract.endGame(gameID, True)
     for account in bets_A.keys():
         first = account.balance()
+        first_total_amount = main_contract.getTotalAmmount(gameID)
         claimWinnings(gameID, main_contract, account)
+        second_total_amount = main_contract.getTotalAmmount(gameID)
         second = account.balance()
         value = bets_A[account]
         bets_A[account] = 0
         coeficients = main_contract.getCoeficients(gameID)
         bank_fee = main_contract.getBankFee(gameID)
         winning = value * (coeficients[0] / 10**9) * (1 - bank_fee / 10**18 - 0.001)
-        assert math.isclose(second - winning, first, abs_tol=10**5)
+        assert (
+            math.isclose(second - winning, first, abs_tol=10**5)
+            and first_total_amount - second_total_amount == winning
+        )
         with pytest.raises(exceptions.VirtualMachineError):
             claimWinnings(gameID, main_contract, account)
 
@@ -86,19 +91,30 @@ def test_claim_winnings_B(main_contract, bets):
     main_contract.endGame(gameID, False)
     for account in bets_B.keys():
         first = account.balance()
+        first_total_amount = main_contract.getTotalAmmount(gameID)
         claimWinnings(gameID, main_contract, account)
+        second_total_amount = main_contract.getTotalAmmount(gameID)
         second = account.balance()
         value = bets_B[account]
         bets_B[account] = 0
 
         winning = value * (coeficients[1] / 10**9) * (1 - bank_fee / 10**18 - 0.001)
-        assert math.isclose(second - winning, first, abs_tol=10**5)
+        assert (
+            math.isclose(second - winning, first, abs_tol=10**5)
+            and first_total_amount - second_total_amount == winning
+        )
         with pytest.raises(exceptions.VirtualMachineError):
             claimWinnings(gameID, main_contract, account)
 
 
 def test_close_game(main_contract, bets):
     bets_A, bets_B = bets
+    total_amount = 10**18
+    start_value = get_account().balance()
+    for i in bets_A.values():
+        total_amount += i
+    for i in bets_B.values():
+        total_amount += i
     gameID = main_contract.getLastGameID() - 1
     coeficients = main_contract.getCoeficients(gameID)
     bank_fee = main_contract.getBankFee(gameID)
@@ -110,11 +126,14 @@ def test_close_game(main_contract, bets):
         bets_T = bets_B
     main_contract.endGame(gameID, isA)
     ran_accs = []
+    balances_1 = []
     for i in range(random.randint(2, 4)):
         if (bets_T.keys()) != 0:
             account = random.choice(list(bets_T.keys()))
+            balances_1.append(account.balance())
             del bets_T[account]
             claimWinnings(gameID, main_contract, account)
+
             ran_accs.append(account)
 
     accs_balances_1 = []
@@ -142,20 +161,20 @@ def test_close_game(main_contract, bets):
         else:
             s = 1
         winning = value * (coeficients[s] / 10**9) * (1 - bank_fee / 10**18 - 0.001)
-        print(
-            i,
-            coeficients[int(isA)] / 10**9,
-            (1 - bank_fee / 10**18 - 0.001),
-            first / 10**18,
-            second / 10**18,
-            bets[i] / 10**18,
-            winning / 10**18,
-            (second - first) / 10**18,
-            (second - first) / winning,
-            len(balances_not_claimed_1),
-        )
+        total_amount -= winning
         assert math.isclose(second - first, winning, abs_tol=10**5)
+    for i in bets_T.keys():
+        with pytest.raises(exceptions.VirtualMachineError):
+            claimWinnings(gameID, main_contract, i)
+
     accs_balances_2 = []
     for i in ran_accs:
         accs_balances_2.append(i.balance())
+
     assert accs_balances_1 == accs_balances_2
+    for i in range(len(balances_1)):
+        total_amount -= accs_balances_2[i] - balances_1[i]
+
+    assert math.isclose(
+        start_value + total_amount, get_account().balance(), abs_tol=10**9
+    )
