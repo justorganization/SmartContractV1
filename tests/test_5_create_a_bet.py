@@ -39,8 +39,7 @@ def test_create_a_bet_4(account, main_contract):
     capacities_1 = main_contract.getCapacities(gameID)
     makeABet(gameID, True, main_contract, account, value)
     cap_A = capacities_1[0] - value
-    total_amount = main_contract.getTotalAmmount(gameID)
-    cap_B = int(total_amount / (coeficients[1] - 10**9)) * 10**9
+    cap_B = capacities_1[1] + int(value / (coeficients[1] - 10**9)) * 10**9
     capacities = main_contract.getCapacities(gameID)
     assert cap_B == capacities[1] and cap_A == capacities[0]
 
@@ -54,8 +53,7 @@ def test_create_a_bet_5(account, main_contract):
     capacities_1 = main_contract.getCapacities(gameID)
     makeABet(gameID, False, main_contract, account, value)
     cap_B = capacities_1[1] - value
-    total_amount = main_contract.getTotalAmmount(gameID)
-    cap_A = int(total_amount / (coeficients[0] - 10**9)) * 10**9
+    cap_A = capacities_1[0] + int(10**17 / (coeficients[0] - 10**9)) * 10**9
     capacities = main_contract.getCapacities(gameID)
     assert cap_B == capacities[1] and cap_A == capacities[0]
 

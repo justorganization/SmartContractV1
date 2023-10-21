@@ -3,13 +3,29 @@ from brownie import network, MainContract, exceptions
 import pytest
 import random
 import math
+import datetime
+import os
+
+import shutil
 
 
 @pytest.fixture
 def bets(main_contract):
+    shutil.rmtree("logs")
+    os.mkdir("logs")
+    current_datetime = datetime.datetime.now()
+    formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
+    file_name = f"logs/file_{formatted_datetime}.txt"
+
     account = get_account()
     createGame(0.03, 1.8, 2.3, 0, main_contract, account, 10**18)
     gameID = main_contract.getLastGameID() - 1
+    capacities = main_contract.getCapacities(gameID)
+    with open(file_name, "w") as file:
+        file.write(
+            f"\nCapacities:{capacities[0]/10**18},{capacities[1]/10**18}||Total Amount:{main_contract.getTotalAmmount(gameID)/10**18}"
+        )
+
     bets_A = {}
     bets_B = {}
     for i in range(random.randint(20, 50)):
@@ -25,17 +41,43 @@ def bets(main_contract):
                 if main_contract.getDeposit(gameID, account, True) > 0:
                     addBetLiquidity(gameID, isA, main_contract, account, value)
                     bets_A[account] += value
+                    with open(file_name, "a") as file:
+                        file.write(
+                            f"\nCapacities:{capacities[0]/10**18},{capacities[1]/10**18}||Betted amount:{value/10**18}||Total Amount:{main_contract.getTotalAmmount(gameID)/10**18}||Function type: AddBetLiquidity|| Team A"
+                        )
                 else:
                     makeABet(gameID, isA, main_contract, account, value)
                     bets_A[account] = value
+                    with open(file_name, "a") as file:
+                        file.write(
+                            f"\nCapacities:{capacities[0]/10**18},{capacities[1]/10**18}||Betted amount:{value/10**18}||Total Amount:{main_contract.getTotalAmmount(gameID)/10**18}||Function type: CreateBet|| Team A"
+                        )
         else:
             if value < capacities[1]:
                 if main_contract.getDeposit(gameID, account, False) > 0:
                     addBetLiquidity(gameID, isA, main_contract, account, value)
                     bets_B[account] += value
+                    with open(file_name, "a") as file:
+                        file.write(
+                            f"\nCapacities:{capacities[0]/10**18},{capacities[1]/10**18}||Betted amount:{value/10**18}||Total Amount:{main_contract.getTotalAmmount(gameID)/10**18}||Function type: AddBetLiquidity|| Team B"
+                        )
                 else:
                     makeABet(gameID, isA, main_contract, account, value)
                     bets_B[account] = value
+                    with open(file_name, "a") as file:
+                        file.write(
+                            f"\nCapacities:{capacities[0]/10**18},{capacities[1]/10**18}||Betted amount:{value/10**18}||Total Amount:{main_contract.getTotalAmmount(gameID)/10**18}||Function type: CreateBet|| Team B"
+                        )
+    with open(file_name, "a") as file:
+        tot_A = 0
+        for i in bets_A.keys():
+            tot_A += bets_A[i]
+        tot_B = 0
+        for i in bets_B.keys():
+            tot_B += bets_B[i]
+        file.write(
+            f"\nCapacities:{capacities[0]/10**18},{capacities[1]/10**18}||Betted amount A:{tot_A/10**18}, B: {tot_B/10**18}||Total Amount:{main_contract.getTotalAmmount(gameID)/10**18}"
+        )
     return bets_A, bets_B
 
 
@@ -74,10 +116,12 @@ def test_claim_winnings_A(main_contract, bets):
         bets_A[account] = 0
         coeficients = main_contract.getCoeficients(gameID)
         bank_fee = main_contract.getBankFee(gameID)
+        capacities = main_contract.getCapacities(gameID)
         winning = value * (coeficients[0] / 10**9) * (1 - bank_fee / 10**18 - 0.001)
-        assert (
-            math.isclose(second - winning, first, abs_tol=10**5)
-            and first_total_amount - second_total_amount == winning
+        print(capacities[0] / 10**18, capacities[1] / 10**18)
+        print((first_total_amount - second_total_amount) / 10**18, winning / 10**18)
+        assert math.isclose(second - winning, first, abs_tol=10**5) and math.isclose(
+            first_total_amount - second_total_amount, winning, abs_tol=10**5
         )
         with pytest.raises(exceptions.VirtualMachineError):
             claimWinnings(gameID, main_contract, account)
@@ -99,15 +143,18 @@ def test_claim_winnings_B(main_contract, bets):
         bets_B[account] = 0
 
         winning = value * (coeficients[1] / 10**9) * (1 - bank_fee / 10**18 - 0.001)
-        assert (
-            math.isclose(second - winning, first, abs_tol=10**5)
-            and first_total_amount - second_total_amount == winning
+        capacities = main_contract.getCapacities(gameID)
+        print(capacities[0] / 10**18, capacities[1] / 10**18)
+        print((first_total_amount - second_total_amount) / 10**18, winning / 10**18)
+        assert math.isclose(second - winning, first, abs_tol=10**5) and math.isclose(
+            first_total_amount - second_total_amount, winning, abs_tol=10**5
         )
         with pytest.raises(exceptions.VirtualMachineError):
             claimWinnings(gameID, main_contract, account)
 
 
 def test_close_game(main_contract, bets):
+    # preparation
     bets_A, bets_B = bets
     total_amount = 10**18
     start_value = get_account().balance()
@@ -125,20 +172,20 @@ def test_close_game(main_contract, bets):
         isA = False
         bets_T = bets_B
     main_contract.endGame(gameID, isA)
+
+    # random accounts claim winnings
     ran_accs = []
     balances_1 = []
+    print(bets_T)
     for i in range(random.randint(2, 4)):
-        if (bets_T.keys()) != 0:
+        if (len(bets_T.keys())) != 0:
             account = random.choice(list(bets_T.keys()))
+            claimWinnings(gameID, main_contract, account)
             balances_1.append(account.balance())
             del bets_T[account]
-            claimWinnings(gameID, main_contract, account)
-
             ran_accs.append(account)
 
-    accs_balances_1 = []
-    for i in ran_accs:
-        accs_balances_1.append(i.balance())
+    # End game and collecting accounts data
     main_contract.endGame(gameID, isA)
     balances_not_claimed_1 = []
     bets = []
@@ -146,7 +193,7 @@ def test_close_game(main_contract, bets):
     for i in x:
         balances_not_claimed_1.append(i.balance())
         bets.append(bets_T[i])
-
+    # Closing game, collecting balances data, calculating winnings, comparing calculated winnings with expected
     main_contract.closeGame(gameID, {"from": get_account()})
     balances_not_claimed_2 = []
     for i in x:
@@ -163,15 +210,16 @@ def test_close_game(main_contract, bets):
         winning = value * (coeficients[s] / 10**9) * (1 - bank_fee / 10**18 - 0.001)
         total_amount -= winning
         assert math.isclose(second - first, winning, abs_tol=10**5)
+    # Trying to claim winnings after closing game
     for i in bets_T.keys():
         with pytest.raises(exceptions.VirtualMachineError):
             claimWinnings(gameID, main_contract, i)
-
+    # Collecting and comparing data about accounts which claimed before close
     accs_balances_2 = []
     for i in ran_accs:
         accs_balances_2.append(i.balance())
 
-    assert accs_balances_1 == accs_balances_2
+    assert balances_1 == accs_balances_2
     for i in range(len(balances_1)):
         total_amount -= accs_balances_2[i] - balances_1[i]
 

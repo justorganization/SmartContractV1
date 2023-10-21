@@ -56,12 +56,13 @@ contract MainContract {
     function addGameLiquidity(
         uint64 gameID
     ) public payable onlyGameNotFinished(gameID) onlyBank(gameID) {
-        uint256 totalGameAmount = totalAmount[gameID] + msg.value;
-        totalAmount[gameID] = totalGameAmount;
-        uint128[2] memory coeficientsGame = coeficients[gameID];
+        totalAmount[gameID] = totalAmount[gameID] + msg.value;
+
         capacities[gameID] = [
-            (totalGameAmount / (coeficientsGame[0] - 10 ** 9)) * 10 ** 9,
-            (totalGameAmount / (coeficientsGame[1] - 10 ** 9)) * 10 ** 9
+            capacities[gameID][0] +
+                ((msg.value / (coeficients[gameID][0] - 10 ** 9)) * 10 ** 9),
+            capacities[gameID][1] +
+                ((msg.value / (coeficients[gameID][1] - 10 ** 9)) * 10 ** 9)
         ];
         bankDeposit[gameID] += msg.value;
     }
@@ -75,19 +76,21 @@ contract MainContract {
         } else {
             require(msg.value < capacities[gameID][1]);
         }
-        uint256 totalGameAmount = totalAmount[gameID] + msg.value;
-        totalAmount[gameID] = totalGameAmount;
+
+        totalAmount[gameID] += msg.value;
         if (isA) {
             capacities[gameID] = [
                 capacities[gameID][0] - (msg.value),
-                (totalGameAmount / (coeficients[gameID][1] - 10 ** 9)) * 10 ** 9
+                capacities[gameID][1] +
+                    ((msg.value / (coeficients[gameID][1] - 10 ** 9)) * 10 ** 9)
             ];
             usersA[gameID][msg.sender] = msg.value;
             usersAlist[gameID].push(msg.sender);
         } else {
             capacities[gameID] = [
-                (totalGameAmount / (coeficients[gameID][0] - 10 ** 9)) *
-                    10 ** 9,
+                capacities[gameID][0] +
+                    ((msg.value / (coeficients[gameID][0] - 10 ** 9)) *
+                        10 ** 9),
                 capacities[gameID][1] - (msg.value)
             ];
             usersB[gameID][msg.sender] = msg.value;
@@ -102,24 +105,24 @@ contract MainContract {
         if (isA) {
             require(msg.value < capacities[gameID][0]);
             require(usersA[gameID][msg.sender] != 0);
-            uint256 totalGameAmount = totalAmount[gameID] + msg.value;
             capacities[gameID] = [
                 capacities[gameID][0] - (msg.value),
-                (totalGameAmount / (coeficients[gameID][1] - 10 ** 9)) * 10 ** 9
+                capacities[gameID][1] +
+                    ((msg.value / (coeficients[gameID][1] - 10 ** 9)) * 10 ** 9)
             ];
             usersA[gameID][msg.sender] += msg.value;
-            totalAmount[gameID] = totalGameAmount;
+            totalAmount[gameID] += msg.value;
         } else {
             require(msg.value < capacities[gameID][1]);
             require(usersB[gameID][msg.sender] != 0);
-            uint256 totalGameAmount = totalAmount[gameID] + msg.value;
             capacities[gameID] = [
-                (totalGameAmount / (coeficients[gameID][0] - 10 ** 9)) *
-                    10 ** 9,
+                capacities[gameID][0] +
+                    ((msg.value / (coeficients[gameID][0] - 10 ** 9)) *
+                        10 ** 9),
                 capacities[gameID][1] - (msg.value)
             ];
             usersB[gameID][msg.sender] += msg.value;
-            totalAmount[gameID] = totalGameAmount;
+            totalAmount[gameID] += msg.value;
         }
     }
 
