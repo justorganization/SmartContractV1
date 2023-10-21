@@ -80,6 +80,10 @@ def claimWinnings(gameID: int, main_contract, account):
     main_contract.claimWinnings(gameID, {"from": account})
 
 
+def claimBet(gameID: int, main_contract, account):
+    main_contract.claimBet(gameID, {"from": account})
+
+
 import random
 import string
 
