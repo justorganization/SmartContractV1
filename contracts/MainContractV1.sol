@@ -17,7 +17,10 @@ contract MainContract {
     mapping(uint64 => bool) public isAWinner;
     mapping(uint64 => address[]) usersAlist;
     mapping(uint64 => address[]) usersBlist;
+    mapping(uint64 => bool) raised;
+    mapping(uint64 => uint256) ownersRaise;
     uint256 ownersFee = 1000000000000000;
+    uint256 ownersPool;
     address owner;
     uint64 lastGameID;
     uint128 lastDataID;
@@ -51,6 +54,7 @@ contract MainContract {
             (msg.value / (coefB - 10 ** 9)) * 10 ** 9
         ];
         lastGameID = lastGameID + 1;
+        raised[lastGameID] = false;
     }
 
     function addGameLiquidity(
@@ -145,6 +149,10 @@ contract MainContract {
 
     function claimWinnings(uint64 gameID) public onlyGameFinished(gameID) {
         require(keyExists(gameID, msg.sender, isAWinner[gameID]));
+        if (!raised[gameID]) {
+            ownersRaise[gameID] = totalAmount[gameID] / 1000;
+            raised[gameID] = true;
+        }
         uint256 winning;
         if (isAWinner[gameID]) {
             address payable winner = payable(msg.sender);
@@ -170,6 +178,10 @@ contract MainContract {
     function closeGame(
         uint64 gameID
     ) public onlyGameFinished(gameID) onlyBank(gameID) {
+        if (!raised[gameID]) {
+            ownersRaise[gameID] = totalAmount[gameID] / 1000;
+            raised[gameID] = true;
+        }
         if (isAWinner[gameID]) {
             for (uint32 i = 0; i < usersAlist[gameID].length; i++) {
                 if (usersA[gameID][usersAlist[gameID][i]] != 0) {
@@ -196,9 +208,10 @@ contract MainContract {
             }
         }
         address payable bank = payable(msg.sender);
-        bank.transfer(
-            (totalAmount[gameID] * (10 ** 18 - 1000000000000000)) / 10 ** 18
-        );
+        uint256 bankIncome = totalAmount[gameID] - ownersRaise[gameID];
+        bank.transfer(bankIncome);
+        totalAmount[gameID] -= bankIncome;
+        ownersPool += totalAmount[gameID];
     }
 
     // modifiers

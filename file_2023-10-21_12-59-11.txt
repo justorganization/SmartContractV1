@@ -1,0 +1,21 @@
+
+Capacities:1.25,0.769230769||Total Amount:1.0
+Capacities:1.25,0.769230769||Betted amount:0.3||Total Amount:1.3||Function type: CreateBet|| Team B
+Capacities:1.625,0.469230769||Betted amount:0.08||Total Amount:1.38||Function type: CreateBet|| Team A
+Capacities:1.545,0.53076923||Betted amount:0.5||Total Amount:1.88||Function type: CreateBet|| Team B
+Capacities:2.17,0.03076923||Betted amount:0.005||Total Amount:1.885||Function type: CreateBet|| Team B
+Capacities:2.17625,0.02576923||Betted amount:0.003||Total Amount:1.888||Function type: AddBetLiquidity|| Team B
+Capacities:2.18,0.02276923||Betted amount:0.6||Total Amount:2.488||Function type: CreateBet|| Team A
+Capacities:1.58,0.484307691||Betted amount:0.005||Total Amount:2.493||Function type: CreateBet|| Team A
+Capacities:1.575,0.488153844||Betted amount:0.002||Total Amount:2.495||Function type: CreateBet|| Team B
+Capacities:1.5775,0.486153844||Betted amount:0.007||Total Amount:2.502||Function type: CreateBet|| Team B
+Capacities:1.58625,0.479153844||Betted amount:0.002||Total Amount:2.504||Function type: CreateBet|| Team B
+Capacities:1.58875,0.477153844||Betted amount:0.8||Total Amount:3.304||Function type: AddBetLiquidity|| Team A
+Capacities:0.78875,1.092538459||Betted amount:0.03||Total Amount:3.334||Function type: AddBetLiquidity|| Team B
+Capacities:0.82625,1.062538459||Betted amount A:1.485, B: 0.849||Total Amount:3.334
+Total Amount:3.334|0.08||0.6||0.805|
+Total Amount:3.194464||Winning: 0.139536|| Team True
+Total Amount:2.147944||Winning: 1.04652|| Team True
+Total Amount:0.743863||Winning: 1.404081|| Team True
+Total Amount before close:0.743863
+Total Amount after close:0.000743863
