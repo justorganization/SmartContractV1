@@ -78,11 +78,11 @@ def bets(main_contract):
                         )
     with open(file_name, "a") as file:
         tot_A = 0
-        for i in bets_A.keys():
-            tot_A += bets_A[i]
+        for i in accounts:
+            tot_A += main_contract.getDeposit(gameID, i, True)
         tot_B = 0
-        for i in bets_B.keys():
-            tot_B += bets_B[i]
+        for i in accounts:
+            tot_B += main_contract.getDeposit(gameID, i, False)
         file.write(
             f"\nCapacities:{capacities[0]/10**18},{capacities[1]/10**18}||Betted amount A:{tot_A/10**18}, B: {tot_B/10**18}||Total Amount:{main_contract.getTotalAmmount(gameID)/10**18}"
         )

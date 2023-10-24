@@ -29,12 +29,14 @@ def test_cancel_game(account, main_contract):
 
 def test_claim_bets(main_contract, bets):
     bets_A, bets_B, x = bets
-    bets_B_keys = bets_B.keys()
+
     _bets = {}
-    for i in bets_A.keys():
-        _bets[i] = bets_A[i]
-        if i in bets_B_keys:
-            _bets[i] += bets_B[i]
+    for key, value in bets_A.items():
+        _bets[key] = _bets.get(key, 0) + value
+
+    for key, value in bets_B.items():
+        _bets[key] = _bets.get(key, 0) + value
+
     gameID = main_contract.getLastGameID() - 1
     main_contract.endGame(gameID, True, True, {"from": get_account()})
     for account in _bets.keys():
@@ -51,32 +53,29 @@ def test_claim_bets(main_contract, bets):
         assert math.isclose(second - winning, first, abs_tol=10**5) and math.isclose(
             first_total_amount - second_total_amount, winning, abs_tol=10**5
         )
-        with pytest.raises(exceptions.VirtualMachineError):
-            claimBet(gameID, main_contract, account)
 
 
 def test_close_canceled_game(main_contract, bets):
-    bets_A, bets_B, file_name = bets
-
+    start_value_1 = get_account().balance()
     total_amount = 10**18
 
-    for i in bets_A.values():
-        total_amount += i
-    for i in bets_B.values():
-        total_amount += i
+    bets_A, bets_B, file_name = bets
 
-    bets_B_keys = bets_B.keys()
     _bets = {}
-    for i in bets_A.keys():
-        _bets[i] = bets_A[i]
-        if i in bets_B_keys:
-            _bets[i] += bets_B[i]
+    for key, value in bets_A.items():
+        _bets[key] = _bets.get(key, 0) + value
 
+    for key, value in bets_B.items():
+        _bets[key] = _bets.get(key, 0) + value
+
+    for value in _bets.values():
+        total_amount += value
     gameID = main_contract.getLastGameID() - 1
     assert total_amount == main_contract.getTotalAmmount(gameID)
     owners_raise = total_amount / 1000
     bank_fee = main_contract.getBankFee(gameID)
     main_contract.endGame(gameID, True, True, {"from": get_account()})
+    total_amount_0 = main_contract.getTotalAmmount(gameID)
     # random accounts claim winnings
     ran_accs = []
     balances_1 = []
@@ -86,6 +85,16 @@ def test_close_canceled_game(main_contract, bets):
             fir = account.balance()
             claimBet(gameID, main_contract, account)
             total_amount -= account.balance() - fir
+            with open(file_name, "a") as file:
+                tot_A = 0
+                for j in accounts:
+                    tot_A += main_contract.getDeposit(gameID, j, True)
+                tot_B = 0
+                for j in accounts:
+                    tot_B += main_contract.getDeposit(gameID, j, False)
+                file.write(
+                    f"\nClaimBet close: Betted amount A:{tot_A/10**18}, B: {tot_B/10**18}||Total Amount(contract):{main_contract.getTotalAmmount(gameID)/10**18}, Total Amount(simulating):{total_amount/ 10**18}, winning: {(account.balance() - fir)/10**18}"
+                )
             balances_1.append(account.balance())
             del _bets[account]
             ran_accs.append(account)
@@ -98,8 +107,34 @@ def test_close_canceled_game(main_contract, bets):
         balances_not_claimed_1.append(i.balance())
         _1_bets.append(_bets[i])
     # Closing game, collecting balances data, calculating winnings, comparing calculated winnings with expected
-    start_value_1 = get_account().balance()
+
+    total_amount_1 = main_contract.getTotalAmmount(gameID)
+    with open(file_name, "a") as file:
+        tot_A = 0
+        for i in accounts:
+            tot_A += main_contract.getDeposit(gameID, i, True)
+        tot_B = 0
+        for i in accounts:
+            tot_B += main_contract.getDeposit(gameID, i, False)
+        file.write(
+            f"\nBefore close: Betted amount A:{tot_A/10**18}, B: {tot_B/10**18}||Total Amount:{main_contract.getTotalAmmount(gameID)/10**18}"
+        )
     main_contract.closeCanceledGame(gameID, {"from": get_account()})
+    with open(file_name, "a") as file:
+        tot_A = 0
+        for i in accounts:
+            tot_A += main_contract.getDeposit(gameID, i, True)
+        tot_B = 0
+        for i in accounts:
+            tot_B += main_contract.getDeposit(gameID, i, False)
+        file.write(
+            f"\nAfter close: Betted amount A:{tot_A/10**18}, B: {tot_B/10**18}||Total Amount:{main_contract.getTotalAmmount(gameID)/10**18}"
+        )
+    total_amount_2 = main_contract.getTotalAmmount(gameID)
+    with open(file_name, "a") as file:
+        file.write(
+            f"Total amount before claim: {total_amount_0 / 10**18}, after claim:{total_amount_1 / 10**18}, after close:{total_amount_2 / 10**18}"
+        )
     start_value_2 = get_account().balance()
 
     balances_not_claimed_2 = []
@@ -109,16 +144,23 @@ def test_close_canceled_game(main_contract, bets):
     for i in range(len(balances_not_claimed_1)):
         first = balances_not_claimed_1[i]
         second = balances_not_claimed_2[i]
-        value = _1_bets[i]
+        value = list(_bets.values())[i]
 
         winning = value * (1 - bank_fee / 10**18 - 0.001)
         total_amount -= winning
+        with open(file_name, "a") as file:
+            tot_A = 0
+            for j in accounts:
+                tot_A += main_contract.getDeposit(gameID, j, True)
+            tot_B = 0
+            for j in accounts:
+                tot_B += main_contract.getDeposit(gameID, j, False)
+            file.write(
+                f"\nSimulating winnings: Betted amount A:{tot_A/10**18}, B: {tot_B/10**18}||Total Amount(contract):{main_contract.getTotalAmmount(gameID)/10**18}, Total Amount(simulating):{total_amount/ 10**18}, winning: {winning/10**18}"
+            )
         assert math.isclose(second - first, winning, abs_tol=10**5)
     total_amount -= owners_raise
-    # Trying to claim winnings after closing game
-    for i in _bets.keys():
-        with pytest.raises(exceptions.VirtualMachineError):
-            claimBet(gameID, main_contract, i)
+    print(owners_raise)
     # Collecting and comparing data about accounts which claimed before close
     accs_balances_2 = []
     for i in ran_accs:

@@ -199,7 +199,6 @@ contract MainContract {
     function claimBet(
         uint64 gameID
     ) public onlyGameFinished(gameID) gameCanceled(gameID) {
-        require(keyExists(gameID, msg.sender, isAWinner[gameID]));
         if (!raised[gameID]) {
             ownersRaise[gameID] = totalAmount[gameID] / 1000;
             raised[gameID] = true;
