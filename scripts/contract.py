@@ -14,6 +14,7 @@ class Contract:
         A_team_coef,
         B_team_coef,
         main_contract,
+        data,
     ):
         """
         Sets the main characteristics of pool
@@ -22,17 +23,16 @@ class Contract:
         :param A_team_coef: setted by creator coeficient for team A winning
         :param B_team_coef: setted by creator coeficient for team B winning
         """
-        throwData("ss", main_contract, account)
         createGame(
             bank_fee,
             A_team_coef,
             B_team_coef,
-            main_contract.getLastDataID() - 1,
+            data,
             main_contract,
             account,
             total_amount,
         )
-        self.account = account
+        self.bank_account = account
         self.total_amount = total_amount
         self.A_team_coef = A_team_coef
         self.B_team_coef = B_team_coef
@@ -50,9 +50,26 @@ class Contract:
         self.bank_fee = bank_fee
         self.is_finished = False
         self.is_canceled = False
+        self.game_data = data
+
+    def add_game_liquidity(self, account, value):
+        if self.is_finished:
+            with pytest.raises(exceptions.VirtualMachineError):
+                addGameLiquidity(self.game_id, self.contract, account, value)
+        elif account == self.bank_account:
+            addGameLiquidity(self.game_id, self.contract, account, value)
+            self.total_amount += value
+            self.A_capacity = self.total_amount / (self.A_team_coef - 1)
+            self.B_capacity = self.total_amount / (self.B_team_coef - 1)
+        else:
+            with pytest.raises(exceptions.VirtualMachineError):
+                addGameLiquidity(self.game_id, self.contract, account, value)
 
     def make_a_bet_for_team_A(self, account, value):
         if value > self.A_capacity:
+            with pytest.raises(exceptions.VirtualMachineError):
+                makeABet(self.game_id, True, self.contract, account, value=value)
+        elif self.is_finished:
             with pytest.raises(exceptions.VirtualMachineError):
                 makeABet(self.game_id, True, self.contract, account, value=value)
         else:
@@ -68,8 +85,11 @@ class Contract:
                 account, 0
             ) + value * (1 - self.bank_fee - 0.001)
 
-    def make_a_bet_for_team_A(self, account, value):
+    def make_a_bet_for_team_B(self, account, value):
         if value > self.B_capacity:
+            with pytest.raises(exceptions.VirtualMachineError):
+                makeABet(self.game_id, False, self.contract, account, value=value)
+        elif self.is_finished:
             with pytest.raises(exceptions.VirtualMachineError):
                 makeABet(self.game_id, False, self.contract, account, value=value)
         else:
@@ -85,33 +105,139 @@ class Contract:
                 account, 0
             ) + value * (1 - self.bank_fee - 0.001)
 
+    def add_liquidity_to_bet_A(self, account, value):
+        if value > self.A_capacity:
+            with pytest.raises(exceptions.VirtualMachineError):
+                addBetLiquidity(self.game_id, True, self.contract, account, value=value)
+        elif self.is_finished:
+            with pytest.raises(exceptions.VirtualMachineError):
+                addBetLiquidity(self.game_id, True, self.contract, account, value=value)
+        else:
+            addBetLiquidity(self.game_id, True, self.contract, account, value=value)
+            self.A_dict[account] += value
+            self.total_amount += value
+            self.B_capacity += value / (self.B_team_coef - 1)
+            self.A_capacity -= value
+            self.A_expectations[account] += (
+                value * self.A_team_coef * (1 - self.bank_fee - 0.001)
+            )
+            self.Cancel_expectations[account] += value * (1 - self.bank_fee - 0.001)
+
+    def add_liquidity_to_bet_B(self, account, value):
+        if value > self.B_capacity:
+            with pytest.raises(exceptions.VirtualMachineError):
+                addBetLiquidity(
+                    self.game_id, False, self.contract, account, value=value
+                )
+        elif self.is_finished:
+            with pytest.raises(exceptions.VirtualMachineError):
+                addBetLiquidity(
+                    self.game_id, False, self.contract, account, value=value
+                )
+        else:
+            addBetLiquidity(self.game_id, False, self.contract, account, value=value)
+            self.B_dict[account] += value
+            self.total_amount += value
+            self.A_capacity += value / (self.A_team_coef - 1)
+            self.B_capacity -= value
+            self.B_expectations[account] += (
+                value * self.B_team_coef * (1 - self.bank_fee - 0.001)
+            )
+            self.Cancel_expectations[account] += value * (1 - self.bank_fee - 0.001)
+
     def end_game(self, winner_team, is_canceled):
         self.contract.endGame(self.game_id, winner_team, is_canceled)
         self.winner = winner_team
         self.is_canceled = is_canceled
+        self.is_finished = True
+        self.creator_expactation = self.total_amount / 1000
+        if not is_canceled:
+            self.bank_expectation = self.total_amount
+            if winner_team:
+                for i in self.A_expectations.keys():
+                    if self.A_dict[i] != 0:
+                        self.bank_expectation -= self.A_expectations[i]
+            else:
+                for i in self.B_expectations.keys():
+                    if self.B_dict[i] != 0:
+                        self.bank_expectation -= self.B_expectations[i]
 
-    def end_a_game(self, team_winner):
-        if team_winner == "A":
+    def claim_winnings(self, account):
+        if not self.is_finished:
+            with pytest.raises(exceptions.VirtualMachineError):
+                claimWinnings(self.game_id, self.contract, account)
+        elif self.is_canceled:
+            with pytest.raises(exceptions.VirtualMachineError):
+                claimWinnings(self.game_id, self.contract, account)
+        else:
+            if self.winner:
+                if self.A_dict[account] != 0:
+                    claimWinnings(self.game_id, self.contract, account)
+                    self.A_dict[account] = 0
+                else:
+                    with pytest.raises(exceptions.VirtualMachineError):
+                        claimWinnings(self.game_id, self.contract, account)
+            else:
+                if self.B_dict[account] != 0:
+                    claimWinnings(self.game_id, self.contract, account)
+                    self.B_dict[account] = 0
+                else:
+                    with pytest.raises(exceptions.VirtualMachineError):
+                        claimWinnings(self.game_id, self.contract, account)
+
+    def close_game(self, account):
+        if not self.is_finished:
+            with pytest.raises(exceptions.VirtualMachineError):
+                self.contract.closeGame(self.game_id, {"from": account})
+        elif self.is_canceled:
+            with pytest.raises(exceptions.VirtualMachineError):
+                self.contract.closeGame(self.game_id, {"from": account})
+        elif self.bank_account != account:
+            with pytest.raises(exceptions.VirtualMachineError):
+                self.contract.closeGame(self.game_id, {"from": account})
+        else:
+            self.contract.closeGame(self.game_id, {"from": account})
+            if self.winner:
+                for acc in self.A_dict.keys():
+                    if self.A_dict[acc] != 0:
+                        self.A_dict[acc] = 0
+                    else:
+                        with pytest.raises(exceptions.VirtualMachineError):
+                            claimWinnings(self.game_id, self.contract, acc)
+            else:
+                for acc in self.B_dict.keys():
+                    if self.B_dict[acc] != 0:
+                        self.B_dict[acc] = 0
+                    else:
+                        with pytest.raises(exceptions.VirtualMachineError):
+                            claimWinnings(self.game_id, self.contract, acc)
+
+    def claim_bet(self, account):
+        if not self.is_finished:
+            with pytest.raises(exceptions.VirtualMachineError):
+                claimBet(self.game_id, self.contract, account)
+        elif not self.is_canceled:
+            with pytest.raises(exceptions.VirtualMachineError):
+                claimBet(self.game_id, self.contract, account)
+        else:
+            claimBet(self.game_id, self.contract, account)
+            self.A_dict[account] = 0
+            self.B_dict[account] = 0
+
+    def close_canceled_game(self, account):
+        if not self.is_finished:
+            with pytest.raises(exceptions.VirtualMachineError):
+                self.contract.closeCanceledGame(self.game_id, {"from": account})
+        elif not self.is_canceled:
+            with pytest.raises(exceptions.VirtualMachineError):
+                self.contract.closeCanceledGame(self.game_id, {"from": account})
+        elif self.bank_account != account:
+            with pytest.raises(exceptions.VirtualMachineError):
+                self.contract.closeCanceledGame(self.game_id, {"from": account})
+        else:
+            self.contract.closeCanceledGame(self.game_id, {"from": account})
+
             for i in self.A_dict.keys():
-                winning = self.A_dict[i] * self.A_team_coef
-                print(self.pay_to_winner(i, winning))
-                self.total_amount -= winning
-
-        if team_winner == "B":
+                self.A_dict[i] = 0
             for i in self.B_dict.keys():
-                winning = self.B_dict[i] * self.B_team_coef
-                print(self.pay_to_winner(i, winning))
-                self.total_amount -= winning
-
-        return f"Bank gets {self.total_amount}"
-
-
-my_bet = Contract("bank", 10, 1.5, 1.7)
-
-print(my_bet.make_a_bet_for_team_A("Sasha", 100))
-print(my_bet.make_a_bet_for_team_A("Omer", 4))
-print(my_bet.make_a_bet_for_team_B("Yulia", 10))
-print(my_bet.make_a_bet_for_team_B("Lew", 7))
-
-
-print(my_bet.end_a_game("A"))
+                self.B_dict[i] = 0

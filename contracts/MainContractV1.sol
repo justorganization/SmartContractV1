@@ -4,6 +4,7 @@ pragma solidity >=0.6.0 <0.9.0;
 
 contract MainContract {
     mapping(uint128 => string) public gamesData;
+    mapping(uint128 => bool) public dataRelevance;
     mapping(uint64 => uint128) public game;
     mapping(uint128 => uint64[]) public dataToGame;
     mapping(uint64 => address) public bankAddress;
@@ -35,6 +36,7 @@ contract MainContract {
 
     function throwData(string memory data) public onlyOwner {
         gamesData[lastDataID] = data;
+        dataRelevance[lastDataID] = true;
         lastDataID = lastDataID + 1;
     }
 
@@ -44,6 +46,7 @@ contract MainContract {
         uint128 coefB,
         uint128 gameData
     ) public payable validData(gameFee, coefA, coefB, gameData) {
+        require(dataRelevance[gameData]);
         game[lastGameID] = gameData;
         bankAddress[lastGameID] = msg.sender;
         totalAmount[lastGameID] = msg.value;
@@ -149,6 +152,7 @@ contract MainContract {
         bool isA,
         bool isCanceled
     ) public onlyOwner {
+        dataRelevance[dataID] = false;
         for (uint32 i = 0; i < dataToGame[dataID].length; i++) {
             endGame(dataToGame[dataID][i], isA, isCanceled);
         }
