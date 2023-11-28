@@ -4,7 +4,6 @@ from scripts.helpful_functions import *
 
 
 def deploy_simple_storage():
-    account = get_account()
     main_contract = MainContract.deploy({"from": account})
     throwData("Suzik", main_contract, account)
 
@@ -18,4 +17,8 @@ def deploy_simple_storage():
 
 
 def main():
-    deploy_simple_storage()
+    account = get_account()
+    MainLib.deploy({"from": account})
+    main_contract = MainContract.deploy({"from": account})
+    print(main_contract.dataContract())
+    print(main_contract.getDataCAddress())

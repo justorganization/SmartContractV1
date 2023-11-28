@@ -6,13 +6,18 @@ import math
 
 
 def test_cancel_game(account, main_contract):
-    createGame(0.03, 1.8, 1.7, 0, main_contract, account, 10**18)
+    throwData("piskodaw", main_contract, account)
+    dataContract = main_contract.dataContract()
+    data_contract = Contract.from_abi("DataContract", dataContract, DataContract.abi)
+    dataID = data_contract.getLastDataID() - 1
+    createGame(0.03, 1.8, 1.7, dataID, main_contract, account, 10**18)
     gameID = main_contract.getLastGameID() - 1
     with pytest.raises(exceptions.VirtualMachineError):
         claimWinnings(gameID, main_contract, account)
     with pytest.raises(exceptions.VirtualMachineError):
         main_contract.closeGame(gameID)
-    main_contract.endGame(gameID, True, True, {"from": get_account()})
+    dataID = data_contract.getLastDataID() - 1
+    data_contract.endGames(dataID, True, True, {"from": get_account()})
     with pytest.raises(exceptions.VirtualMachineError):
         makeABet(gameID, True, main_contract, account, 10**15)
     with pytest.raises(exceptions.VirtualMachineError):
@@ -30,6 +35,8 @@ def test_cancel_game(account, main_contract):
 def test_claim_bets(main_contract, bets):
     bets_A, bets_B, x = bets
 
+    dataContract = main_contract.dataContract()
+    data_contract = Contract.from_abi("DataContract", dataContract, DataContract.abi)
     _bets = {}
     for key, value in bets_A.items():
         _bets[key] = _bets.get(key, 0) + value
@@ -38,7 +45,8 @@ def test_claim_bets(main_contract, bets):
         _bets[key] = _bets.get(key, 0) + value
 
     gameID = main_contract.getLastGameID() - 1
-    main_contract.endGame(gameID, True, True, {"from": get_account()})
+    dataID = data_contract.getLastDataID() - 1
+    data_contract.endGames(dataID, True, True, {"from": get_account()})
     for account in _bets.keys():
         first = account.balance()
         first_total_amount = main_contract.getTotalAmmount(gameID)
@@ -58,7 +66,8 @@ def test_claim_bets(main_contract, bets):
 def test_close_canceled_game(main_contract, bets):
     start_value_1 = get_account().balance()
     total_amount = 10**18
-
+    dataContract = main_contract.dataContract()
+    data_contract = Contract.from_abi("DataContract", dataContract, DataContract.abi)
     bets_A, bets_B, file_name = bets
 
     _bets = {}
@@ -74,7 +83,8 @@ def test_close_canceled_game(main_contract, bets):
     assert total_amount == main_contract.getTotalAmmount(gameID)
     owners_raise = total_amount / 1000
     bank_fee = main_contract.getBankFee(gameID)
-    main_contract.endGame(gameID, True, True, {"from": get_account()})
+    dataID = data_contract.getLastDataID() - 1
+    data_contract.endGames(dataID, True, True, {"from": get_account()})
     total_amount_0 = main_contract.getTotalAmmount(gameID)
     # random accounts claim winnings
     ran_accs = []

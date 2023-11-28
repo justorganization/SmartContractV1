@@ -26,7 +26,11 @@ def bets(main_contract):
     file_name = f"logs/file_{formatted_datetime}.txt"
 
     account = get_account()
-    createGame(0.03, 1.8, 1.7, 0, main_contract, account, 10**18)
+    throwData("piskodaw", main_contract, account)
+    dataContract = main_contract.dataContract()
+    data_contract = Contract.from_abi("DataContract", dataContract, DataContract.abi)
+    dataID = data_contract.getLastDataID() - 1
+    createGame(0.03, 1.8, 1.7, dataID, main_contract, account, 10**18)
     gameID = main_contract.getLastGameID() - 1
     capacities = main_contract.getCapacities(gameID)
     with open(file_name, "w") as file:

@@ -6,13 +6,17 @@ import math
 
 
 def test_finishing_game(account, main_contract):
-    createGame(0.03, 1.8, 1.7, 0, main_contract, account, 10**18)
+    throwData("sss", main_contract, account)
+    dataContract = main_contract.dataContract()
+    data_contract = Contract.from_abi("DataContract", dataContract, DataContract.abi)
+    dataID = data_contract.getLastDataID() - 1
+    createGame(0.03, 1.8, 1.7, dataID, main_contract, account, 10**18)
     gameID = main_contract.getLastGameID() - 1
     with pytest.raises(exceptions.VirtualMachineError):
         claimWinnings(gameID, main_contract, account)
     with pytest.raises(exceptions.VirtualMachineError):
         main_contract.closeGame(gameID)
-    main_contract.endGame(gameID, True, False, {"from": get_account()})
+    data_contract.endGames(dataID, True, False, {"from": get_account()})
     with pytest.raises(exceptions.VirtualMachineError):
         makeABet(gameID, True, main_contract, account, 10**15)
     with pytest.raises(exceptions.VirtualMachineError):
@@ -29,8 +33,11 @@ def test_finishing_game(account, main_contract):
 
 def test_claim_winnings_A(main_contract, bets):
     bets_A, bets_B, x = bets
+    dataContract = main_contract.dataContract()
+    data_contract = Contract.from_abi("DataContract", dataContract, DataContract.abi)
     gameID = main_contract.getLastGameID() - 1
-    main_contract.endGame(gameID, True, False, {"from": get_account()})
+    dataID = data_contract.getLastDataID() - 1
+    data_contract.endGames(dataID, True, False, {"from": get_account()})
     for account in bets_A.keys():
         first = account.balance()
         first_total_amount = main_contract.getTotalAmmount(gameID)
@@ -53,10 +60,13 @@ def test_claim_winnings_A(main_contract, bets):
 
 def test_claim_winnings_B(main_contract, bets):
     bets_A, bets_B, x = bets
+    dataContract = main_contract.dataContract()
+    data_contract = Contract.from_abi("DataContract", dataContract, DataContract.abi)
     gameID = main_contract.getLastGameID() - 1
     coeficients = main_contract.getCoeficients(gameID)
     bank_fee = main_contract.getBankFee(gameID)
-    main_contract.endGame(gameID, False, False, {"from": get_account()})
+    dataID = data_contract.getLastDataID() - 1
+    data_contract.endGames(dataID, False, False, {"from": get_account()})
     for account in bets_B.keys():
         first = account.balance()
         first_total_amount = main_contract.getTotalAmmount(gameID)
@@ -77,6 +87,8 @@ def test_claim_winnings_B(main_contract, bets):
 
 def test_close_game(main_contract, bets):
     # preparation
+    dataContract = main_contract.dataContract()
+    data_contract = Contract.from_abi("DataContract", dataContract, DataContract.abi)
     bets_A, bets_B, file_name = bets
 
     total_amount = 10**18
@@ -100,7 +112,8 @@ def test_close_game(main_contract, bets):
         file.write(f"\nTotal Amount:{main_contract.getTotalAmmount(gameID)/10**18}")
         for i in bets_T.values():
             file.write(f"|{i/10**18}|")
-    main_contract.endGame(gameID, isA, False, {"from": get_account()})
+    dataID = data_contract.getLastDataID() - 1
+    data_contract.endGames(dataID, isA, False, {"from": get_account()})
 
     # random accounts claim winnings
     ran_accs = []

@@ -1,43 +1,34 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity >=0.6.0 <0.9.0;
+import "./MainLib.sol";
+import "./DataContract.sol";
 
 contract MainContract {
-    mapping(uint128 => string) public gamesData;
-    mapping(uint128 => bool) public dataRelevance;
     mapping(uint64 => uint128) public game;
-    mapping(uint128 => uint64[]) public dataToGame;
     mapping(uint64 => address) public bankAddress;
     mapping(uint64 => uint256) public totalAmount;
     mapping(uint64 => uint128) public bankFee;
     mapping(uint64 => uint256) public bankDeposit;
-    mapping(uint64 => bool) public finished;
     mapping(uint64 => uint128[2]) public coeficients;
     mapping(uint64 => uint256[2]) public capacities;
     mapping(uint64 => mapping(address => uint256)) public usersA;
     mapping(uint64 => mapping(address => uint256)) public usersB;
-    mapping(uint64 => bool) public isAWinner;
     mapping(uint64 => address[]) usersAlist;
     mapping(uint64 => address[]) usersBlist;
     mapping(uint64 => bool) raised;
-    mapping(uint64 => bool) isGameCanceled;
+
     mapping(uint64 => uint256) ownersRaise;
     uint256 ownersFee = 1000000000000000;
     uint256 ownersPool;
     address owner;
     uint64 lastGameID;
-    uint128 lastDataID;
+    DataContract public dataContract;
 
     constructor() public {
         owner = msg.sender;
         lastGameID = 0;
-        lastDataID = 0;
-    }
-
-    function throwData(string memory data) public onlyOwner {
-        gamesData[lastDataID] = data;
-        dataRelevance[lastDataID] = true;
-        lastDataID = lastDataID + 1;
+        dataContract = new DataContract(owner);
     }
 
     function createGame(
@@ -46,19 +37,19 @@ contract MainContract {
         uint128 coefB,
         uint128 gameData
     ) public payable validData(gameFee, coefA, coefB, gameData) {
-        require(dataRelevance[gameData]);
+        require(dataContract.dataRelevance(gameData));
         game[lastGameID] = gameData;
         bankAddress[lastGameID] = msg.sender;
         totalAmount[lastGameID] = msg.value;
         bankFee[lastGameID] = gameFee;
-        finished[lastGameID] = false;
         bankDeposit[lastGameID] = msg.value;
         coeficients[lastGameID] = [coefA, coefB];
-        capacities[lastGameID] = [
-            (msg.value / (coefA - 10 ** 9)) * 10 ** 9,
-            (msg.value / (coefB - 10 ** 9)) * 10 ** 9
-        ];
-        dataToGame[gameData].push(lastGameID);
+        capacities[lastGameID] = MainLib.calculateCapacities(
+            msg.value,
+            coefA,
+            coefB
+        );
+        dataContract.addDataToGame(gameData, lastGameID);
         raised[lastGameID] = false;
         lastGameID = lastGameID + 1;
     }
@@ -68,12 +59,13 @@ contract MainContract {
     ) public payable onlyGameNotFinished(gameID) onlyBank(gameID) {
         totalAmount[gameID] = totalAmount[gameID] + msg.value;
 
-        capacities[gameID] = [
-            capacities[gameID][0] +
-                ((msg.value / (coeficients[gameID][0] - 10 ** 9)) * 10 ** 9),
-            capacities[gameID][1] +
-                ((msg.value / (coeficients[gameID][1] - 10 ** 9)) * 10 ** 9)
-        ];
+        capacities[gameID] = MainLib.calculateAddLCapacities(
+            msg.value,
+            coeficients[gameID][0],
+            coeficients[gameID][1],
+            capacities[gameID][0],
+            capacities[gameID][1]
+        );
         bankDeposit[gameID] += msg.value;
     }
 
@@ -89,23 +81,20 @@ contract MainContract {
 
         totalAmount[gameID] += msg.value;
         if (isA) {
-            capacities[gameID] = [
-                capacities[gameID][0] - (msg.value),
-                capacities[gameID][1] +
-                    ((msg.value / (coeficients[gameID][1] - 10 ** 9)) * 10 ** 9)
-            ];
             usersA[gameID][msg.sender] = msg.value;
             usersAlist[gameID].push(msg.sender);
         } else {
-            capacities[gameID] = [
-                capacities[gameID][0] +
-                    ((msg.value / (coeficients[gameID][0] - 10 ** 9)) *
-                        10 ** 9),
-                capacities[gameID][1] - (msg.value)
-            ];
             usersB[gameID][msg.sender] = msg.value;
             usersBlist[gameID].push(msg.sender);
         }
+        capacities[gameID] = MainLib.calculateMakeBetCapacities(
+            msg.value,
+            coeficients[gameID][0],
+            coeficients[gameID][1],
+            capacities[gameID][0],
+            capacities[gameID][1],
+            isA
+        );
     }
 
     function addLiquidityToBet(
@@ -115,47 +104,21 @@ contract MainContract {
         if (isA) {
             require(msg.value < capacities[gameID][0]);
             require(usersA[gameID][msg.sender] != 0);
-            capacities[gameID] = [
-                capacities[gameID][0] - (msg.value),
-                capacities[gameID][1] +
-                    ((msg.value / (coeficients[gameID][1] - 10 ** 9)) * 10 ** 9)
-            ];
             usersA[gameID][msg.sender] += msg.value;
-            totalAmount[gameID] += msg.value;
         } else {
             require(msg.value < capacities[gameID][1]);
             require(usersB[gameID][msg.sender] != 0);
-            capacities[gameID] = [
-                capacities[gameID][0] +
-                    ((msg.value / (coeficients[gameID][0] - 10 ** 9)) *
-                        10 ** 9),
-                capacities[gameID][1] - (msg.value)
-            ];
             usersB[gameID][msg.sender] += msg.value;
-            totalAmount[gameID] += msg.value;
         }
-    }
-
-    //deprecated(testing purpose)
-    function endGame(
-        uint64 gameID,
-        bool isA,
-        bool isCanceled
-    ) public onlyOwner {
-        finished[gameID] = true;
-        isAWinner[gameID] = isA;
-        isGameCanceled[gameID] = isCanceled;
-    }
-
-    function endGames(
-        uint128 dataID,
-        bool isA,
-        bool isCanceled
-    ) public onlyOwner {
-        dataRelevance[dataID] = false;
-        for (uint32 i = 0; i < dataToGame[dataID].length; i++) {
-            endGame(dataToGame[dataID][i], isA, isCanceled);
-        }
+        capacities[gameID] = MainLib.calculateMakeBetCapacities(
+            msg.value,
+            coeficients[gameID][0],
+            coeficients[gameID][1],
+            capacities[gameID][0],
+            capacities[gameID][1],
+            isA
+        );
+        totalAmount[gameID] += msg.value;
     }
 
     function keyExists(
@@ -173,13 +136,13 @@ contract MainContract {
     function claimWinnings(
         uint64 gameID
     ) public onlyGameFinished(gameID) gameNotCanceled(gameID) {
-        require(keyExists(gameID, msg.sender, isAWinner[gameID]));
+        require(keyExists(gameID, msg.sender, dataContract.isAWinner(gameID)));
         if (!raised[gameID]) {
             ownersRaise[gameID] = totalAmount[gameID] / 1000;
             raised[gameID] = true;
         }
         uint256 winning;
-        if (isAWinner[gameID]) {
+        if (dataContract.isAWinner(gameID)) {
             address payable winner = payable(msg.sender);
             winning =
                 (((usersA[gameID][msg.sender] * coeficients[gameID][0]) /
@@ -266,7 +229,7 @@ contract MainContract {
             ownersRaise[gameID] = totalAmount[gameID] / 1000;
             raised[gameID] = true;
         }
-        if (isAWinner[gameID]) {
+        if (dataContract.isAWinner(gameID)) {
             for (uint32 i = 0; i < usersAlist[gameID].length; i++) {
                 if (usersA[gameID][usersAlist[gameID][i]] != 0) {
                     address payable winner = payable(usersAlist[gameID][i]);
@@ -298,6 +261,10 @@ contract MainContract {
         ownersPool += totalAmount[gameID];
     }
 
+    function withdrawOwnersFees() public payable onlyOwner {
+        payable(owner).transfer(ownersPool);
+    }
+
     // modifiers
 
     modifier hasntBet(uint64 gameID, bool isA) {
@@ -310,11 +277,11 @@ contract MainContract {
     }
 
     modifier onlyGameFinished(uint64 gameID) {
-        require(finished[gameID], "Game is not finished");
+        require(dataContract.finished(gameID), "Game is not finished");
         _;
     }
     modifier onlyGameNotFinished(uint64 gameID) {
-        require(!finished[gameID], "Game is finished");
+        require(!dataContract.finished(gameID), "Game is finished");
         _;
     }
 
@@ -323,19 +290,19 @@ contract MainContract {
         _;
     }
 
+    modifier gameNotCanceled(uint64 gameID) {
+        require(!dataContract.isGameCanceled(gameID));
+        _;
+    }
+    modifier gameCanceled(uint64 gameID) {
+        require(dataContract.isGameCanceled(gameID));
+        _;
+    }
     modifier onlyOwner() {
         require(msg.sender == owner);
         _;
     }
 
-    modifier gameNotCanceled(uint64 gameID) {
-        require(!isGameCanceled[gameID]);
-        _;
-    }
-    modifier gameCanceled(uint64 gameID) {
-        require(isGameCanceled[gameID]);
-        _;
-    }
     modifier validData(
         uint128 gameFee,
         uint128 coefA,
@@ -353,7 +320,8 @@ contract MainContract {
             coefB < 1000000000000000000,
             "Coeficient must be less than 1000000000"
         );
-        require(gameData < lastDataID, "Incorrect data");
+        require(gameData < dataContract.lastDataID(), "Incorrect data");
+        require(dataContract.dataRelevance(gameData));
         _;
     }
 
@@ -366,22 +334,6 @@ contract MainContract {
         return lastGameID;
     }
 
-    function getLastDataID() public view returns (uint128) {
-        return lastDataID;
-    }
-
-    function getGamesData(uint64 gameID) public view returns (string memory) {
-        return gamesData[gameID];
-    }
-
-    function getGameData(uint64 gameID) public view returns (uint128) {
-        return game[gameID];
-    }
-
-    function getBankAddress(uint64 gameID) public view returns (address) {
-        return bankAddress[gameID];
-    }
-
     function getTotalAmmount(uint64 gameID) public view returns (uint256) {
         return totalAmount[gameID];
     }
@@ -392,10 +344,6 @@ contract MainContract {
 
     function getBankDeposit(uint64 gameID) public view returns (uint256) {
         return bankDeposit[gameID];
-    }
-
-    function getIsGameFinished(uint64 gameID) public view returns (bool) {
-        return finished[gameID];
     }
 
     function getCoeficients(
@@ -422,10 +370,6 @@ contract MainContract {
         }
     }
 
-    function getIsAWinner(uint64 gameID) public view returns (bool) {
-        return isAWinner[gameID];
-    }
-
     function getUsersAlist(
         uint64 gameID
     ) public view returns (address[] memory) {
@@ -436,5 +380,13 @@ contract MainContract {
         uint64 gameID
     ) public view returns (address[] memory) {
         return usersBlist[gameID];
+    }
+
+    function getDataCAddress() public view returns (address) {
+        return (address(dataContract));
+    }
+
+    function getGamesData(uint64 gameID) public view returns (uint128) {
+        return (game[gameID]);
     }
 }

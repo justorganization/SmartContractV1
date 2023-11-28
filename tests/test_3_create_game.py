@@ -1,5 +1,5 @@
 from scripts.helpful_functions import *
-from brownie import network, MainContract, exceptions
+from brownie import network, MainContract, exceptions, DataContract, Contract
 import pytest
 import random
 import math
@@ -21,7 +21,7 @@ def test_create_game_2(account, main_contract):
     createGame(bank_fee, coef_A, coef_B, data_ID, main_contract, account)
     bank_fee_2 = main_contract.getBankFee(first_id) / 10**18
     coefs = main_contract.getCoeficients(first_id)
-    data_ID_2 = main_contract.getGameData(first_id)
+    data_ID_2 = main_contract.game(first_id)
     coef_A_2 = coefs[0] / 10**9
     coef_B_2 = coefs[1] / 10**9
     assert (
@@ -42,7 +42,7 @@ def test_create_game_3(account, main_contract):
     createGame(bank_fee, coef_A, coef_B, data_ID, main_contract, account, value)
     bank_fee_2 = main_contract.getBankFee(first_id) / 10**18
     coefs = main_contract.getCoeficients(first_id)
-    data_ID_2 = main_contract.getGameData(first_id)
+    data_ID_2 = main_contract.game(first_id)
     coef_A_2 = coefs[0] / 10**9
     coef_B_2 = coefs[1] / 10**9
     value_2 = main_contract.getTotalAmmount(first_id)
@@ -73,7 +73,7 @@ def test_create_game_4(account, main_contract):
     capacities = main_contract.getCapacities(first_id)
     bank_fee_2 = main_contract.getBankFee(first_id) / 10**18
     coefs = main_contract.getCoeficients(first_id)
-    data_ID_2 = main_contract.getGameData(first_id)
+    data_ID_2 = main_contract.game(first_id)
     coef_A_2 = coefs[0] / 10**9
     coef_B_2 = coefs[1] / 10**9
     value_2 = main_contract.getTotalAmmount(first_id)

@@ -81,11 +81,13 @@ def test_create_game_resistance_general_2(account, main_contract):
     coef_A = 10 * random.random()
     coef_B = 10 * random.random()
     data_ID = random.randint(0, 11)
+    dataContract = main_contract.dataContract()
+    data_contract = Contract.from_abi("DataContract", dataContract, DataContract.abi)
     if (
         bank_fee > 0.1
         or coef_A <= 1
         or coef_B <= 1
-        or data_ID >= main_contract.getLastDataID()
+        or data_ID >= data_contract.getLastDataID()
     ):
         with pytest.raises(exceptions.VirtualMachineError):
             createGame(bank_fee, coef_A, coef_B, data_ID, main_contract, account)
@@ -93,7 +95,7 @@ def test_create_game_resistance_general_2(account, main_contract):
         createGame(bank_fee, coef_A, coef_B, data_ID, main_contract, account)
         bank_fee_2 = main_contract.getBankFee(first_id) / 10**18
         coefs = main_contract.getCoeficients(first_id)
-        data_ID_2 = main_contract.getGameData(first_id)
+        data_ID_2 = main_contract.game(first_id)
         coef_A_2 = coefs[0] / 10**9
         coef_B_2 = coefs[1] / 10**9
         assert (
@@ -115,11 +117,13 @@ def test_create_game_resistance_general_3(account, main_contract):
     coef_A = random.randint(0, 100) * random.random()
     coef_B = random.randint(0, 100) * random.random()
     data_ID = random.randint(0, 10)
+    dataContract = main_contract.dataContract()
+    data_contract = Contract.from_abi("DataContract", dataContract, DataContract.abi)
     if (
         bank_fee > 0.1
         or coef_A <= 1
         or coef_B <= 1
-        or data_ID >= main_contract.getLastDataID()
+        or data_ID >= data_contract.getLastDataID()
     ):
         with pytest.raises(exceptions.VirtualMachineError):
             createGame(bank_fee, coef_A, coef_B, data_ID, main_contract, account)
@@ -127,7 +131,7 @@ def test_create_game_resistance_general_3(account, main_contract):
         createGame(bank_fee, coef_A, coef_B, data_ID, main_contract, account)
         bank_fee_2 = main_contract.getBankFee(first_id) / 10**18
         coefs = main_contract.getCoeficients(first_id)
-        data_ID_2 = main_contract.getGameData(first_id)
+        data_ID_2 = main_contract.game(first_id)
         coef_A_2 = coefs[0] / 10**9
         coef_B_2 = coefs[1] / 10**9
         assert (
@@ -144,6 +148,8 @@ def test_create_game_resistance_3_repeated(account, main_contract, i):
 
 
 def test_create_game_resistance_general_4(account, main_contract):
+    dataContract = main_contract.dataContract()
+    data_contract = Contract.from_abi("DataContract", dataContract, DataContract.abi)
     first_id = main_contract.getLastGameID()
     bank_fee = 0.02
     coef_A = random.randint(0, 100) * random.random()
@@ -155,7 +161,7 @@ def test_create_game_resistance_general_4(account, main_contract):
         bank_fee > 0.1
         or coef_A <= 1
         or coef_B <= 1
-        or data_ID >= main_contract.getLastDataID()
+        or data_ID >= data_contract.getLastDataID()
     ):
         with pytest.raises(exceptions.VirtualMachineError):
             createGame(bank_fee, coef_A, coef_B, data_ID, main_contract, account, value)
@@ -165,7 +171,7 @@ def test_create_game_resistance_general_4(account, main_contract):
         createGame(bank_fee, coef_A, coef_B, data_ID, main_contract, account, value)
         bank_fee_2 = main_contract.getBankFee(first_id) / 10**18
         coefs = main_contract.getCoeficients(first_id)
-        data_ID_2 = main_contract.getGameData(first_id)
+        data_ID_2 = main_contract.game(first_id)
         coef_A_2 = coefs[0] / 10**9
         coef_B_2 = coefs[1] / 10**9
         capacities = main_contract.getCapacities(first_id)
